@@ -80,8 +80,9 @@
 /** flag for SANE_DEBUGF to halt after printing this debug message */
 #define SANE_DBG_HALT          0x08U
 
-#define SANE_DBG_IRQ           0x0100U
-#define SAME_DBG_ETH_RECV      0x0200U
+#define SANE_DBG_CONSOLE       0x0100U
+#define SANE_DBG_IRQ           0x0200U
+#define SAME_DBG_ETH_RECV      0x0400U
 
 /* Plaform specific diagnostic output */
 #define SANE_PLATFORM_DIAG(x)   do {                \

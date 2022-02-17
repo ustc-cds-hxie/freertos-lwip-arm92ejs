@@ -53,7 +53,7 @@ void consoleInit(void)
 /* Init of print related tasks: */
     if ( pdFAIL == printInit(PRINT_UART_NR) )
     {
-        FreeRTOS_Error("Initialization of print failed\r\n");
+        SANE_PLATFORM_ERROR(("Initialization of print failed\r\n"));
     }
 
     /* 
@@ -61,7 +61,7 @@ void consoleInit(void)
     */
     if ( pdFAIL == recvInit(RECV_UART_NR) )
     {
-        FreeRTOS_Error("Initialization of receiver failed\r\n");
+        SANE_PLATFORM_ERROR(("Initialization of receiver failed\r\n"));
     }
 
     /* 
@@ -70,11 +70,11 @@ void consoleInit(void)
     if ( pdPASS != xTaskCreate(printGateKeeperTask, "gk", 128, NULL,
                                PRIOR_PRINT_GATEKEEPR, NULL) )
     {
-        FreeRTOS_Error("Could not create a print gate keeper task\r\n");
+        SANE_PLATFORM_ERROR(("Could not create a print gate keeper task\r\n"));
     }
     else
     {
-       printf_("Created printGateKeeperTask\n");
+       SANE_DEBUGF(SANE_DBG_CONSOLE, ("Created printGateKeeperTask\n"));
     }
 
     if ( pdPASS != xTaskCreate(recvTask, "recv", 128, NULL, PRIOR_RECEIVER, NULL) )
@@ -83,6 +83,6 @@ void consoleInit(void)
     }
     else
     {
-       printf_("Created recvTask\n");
+       SANE_DEBUGF(SANE_DBG_CONSOLE, ("Created recvTask\n"));
     }
 }

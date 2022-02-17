@@ -43,6 +43,7 @@
 #include "FreeRTOSConfig.h"
 
 #include "lwip/init.h"
+#include "lwip/tcpip.h"
 
 #include "print.h"
 #include "printf.h"
@@ -50,6 +51,7 @@
 
 #include "ethernetif.h"
 #include "console.h"
+#include "debug.h"
 
 /*
 ** Startup task
@@ -69,10 +71,10 @@ void show_version( void )
 "*       _____________        __    __    _     _____    *\n"
 "*  ____//__][______||       ( (`  / /\\  | |\\ | | |_     *\n"
 "* (o _ |  -|   _   o|       _)_) /_/--\\ |_| \\| |_|__    *\n"
-"*  `(_)-------(_)---'     (c) 2022 All rights reserved. *\n"
+"*  `(_)-------(_)---'                                   *\n"
 "*                                                       *\n"
-"*    Simuluated Antomotive Network Environment (SANE)   *\n"
-"*                                                       *\n"
+"*    Simuluated Automotive Network Environment (SANE)   *\n"
+"*        Copyright (c) 2022.  All rights reserved.      *\n"
 "*********************************************************\n" 
 "    \n");
 }
@@ -112,20 +114,6 @@ void main(void)
     
     //http_server_socket_init();
 
-#if 0
-    /*
-    ** Create the Startup Task - This is where all the rest of the Application tasks are created
-    */
-    if ( pdPASS != xTaskCreate(startupTask, "start", 1024, NULL, PRIOR_START_TASK , NULL))
-    {
-        FreeRTOS_Error("Could not create Startup task\r\n");
-    }
-    else
-    {
-       vDirectPrintMsg("Created startupTask, starting scheduler\n");
-    }
-#endif
-
 
 #ifdef USE_DHCP
   /* Start DHCPClient */
@@ -138,7 +126,7 @@ void main(void)
     ** vTaskStartScheduler should never return.
     ** If it does return, typically not enough heap memory is reserved.
     */
-    printf_("We should never reach here. System Halt.\n");
+    SANE_PLATFORM_ERROR(("We should never reach here. System Halt.\n"));
 
     /* just in case if an infinite loop is somehow omitted in FreeRTOS_Error */
     while ( 1 );
