@@ -1,48 +1,55 @@
-/*
-Copyright 2013, Jernej Kovacic
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-/**
- * @file
- * A simple demo application.
+/****************************************************************************
+ * Copyright (c) 2021, 2022, Haiyong Xie
+ * All rights reserved.
  *
- * @author Jernej Kovacic
- */
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not 
+ * use this file except in compliance with the License. You may obtain a copy 
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *   - Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *   - Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in the
+ *     documentation and/or other materials provided with the distribution.
+ *   - Neither the name of the author nor the names of its contributors may be
+ *     used to endorse or promote products derived from this software without
+ *     specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER, AUTHOR OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ ****************************************************************************/
 
 #include <stddef.h>
 
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #include <FreeRTOS.h>
 #include <task.h>
 
-#include "app_config.h"
+#include "FreeRTOSConfig.h"
+
+#include "lwip/init.h"
+
 #include "print.h"
+#include "printf.h"
 #include "receive.h"
 
-/*
- * This diagnostic pragma will suppress the -Wmain warning,
- * raised when main() does not return an int
- * (which is perfectly OK in bare metal programming!).
- *
- * More details about the GCC diagnostic pragmas:
- * https://gcc.gnu.org/onlinedocs/gcc/Diagnostic-Pragmas.html
- */
-#pragma GCC diagnostic ignored "-Wmain"
+#include "ethernetif.h"
+#include "console.h"
 
 /*
 ** Startup task
@@ -54,103 +61,58 @@ void startupTask(void* pvParameters);
 */
 void demoTasks();
 
-/*
- * A convenience function that is called when a FreeRTOS API call fails
- * and a program cannot continue. It prints a message (if provided) and
- * ends in an infinite loop.
- */
-void FreeRTOS_Error(const portCHAR* msg)
+
+void show_version( void )
 {
-    if ( NULL != msg )
-    {
-        vDirectPrintMsg(msg);
-    }
-    for ( ; ; );
-}
-
-void vAssertCalled( const char *pcFile, uint32_t ulLine )
-{
-   volatile char *pcFileName = ( volatile char *  ) pcFile;
-   volatile uint32_t ulLineNumber = ulLine;
-
-        ( void ) pcFileName;
-        ( void ) ulLineNumber;
-
-        printf("vAssertCalled: %s, %ld\n", pcFile, ulLine);
-        /* Need to use this instead of printf vDirectPrintMsg(msg); */
-
-        taskDISABLE_INTERRUPTS();
-        {
-                while(1);
-        }
-        taskENABLE_INTERRUPTS();
-}
-
-void vApplicationMallocFailedHook( void )
-{
-        /* Called if a call to pvPortMalloc() fails because there is insufficient
-        free memory available in the FreeRTOS heap.  pvPortMalloc() is called
-        internally by FreeRTOS API functions that create tasks, queues, software
-        timers, and semaphores.  The size of the FreeRTOS heap is set by the
-        configTOTAL_HEAP_SIZE configuration constant in FreeRTOSConfig.h. */
-        vAssertCalled( __FILE__, __LINE__ );
+    printf_("\n"
+"*********************************************************\n" 
+"*       _____________        __    __    _     _____    *\n"
+"*  ____//__][______||       ( (`  / /\\  | |\\ | | |_     *\n"
+"* (o _ |  -|   _   o|       _)_) /_/--\\ |_| \\| |_|__    *\n"
+"*  `(_)-------(_)---'     (c) 2022 All rights reserved. *\n"
+"*                                                       *\n"
+"*    Simuluated Antomotive Network Environment (SANE)   *\n"
+"*                                                       *\n"
+"*********************************************************\n" 
+"    \n");
 }
 
 /* 
 ** Startup function that creates and runs two FreeRTOS tasks 
 */
+
+/*
+ * I M P O R T A N T :
+ * Make sure (in startup.s) that main is entered in Supervisor mode.
+ * When vTaskStartScheduler launches the first task, it will switch
+ * to System mode and enable interrupt exceptions.
+*/
+
 void main(void)
 {
-    /* Init of print related tasks: */
-    if ( pdFAIL == printInit(PRINT_UART_NR) )
-    {
-        FreeRTOS_Error("Initialization of print failed\r\n");
-    }
+    consoleInit();
+  
+    show_version();
 
-    /*
-     * I M P O R T A N T :
-     * Make sure (in startup.s) that main is entered in Supervisor mode.
-     * When vTaskStartScheduler launches the first task, it will switch
-     * to System mode and enable interrupt exceptions.
-    */
-    vDirectPrintMsg("= = = M A I N  S T A R T E D = = =\r\n\r\n");
+    //demoTasks();
 
-    /* 
-    ** Init of receiver related tasks: 
-    */
-    if ( pdFAIL == recvInit(RECV_UART_NR) )
-    {
-        FreeRTOS_Error("Initialization of receiver failed\r\n");
-    }
+    printf_("Loading FreeRTOS %s ... \n", tskKERNEL_VERSION_NUMBER);
+    printf_("FreeRTOS %s is ready.\n", tskKERNEL_VERSION_NUMBER);
 
-    /* 
-    ** Create a print gate keeper task: 
-    */
-    if ( pdPASS != xTaskCreate(printGateKeeperTask, "gk", 128, NULL,
-                               PRIOR_PRINT_GATEKEEPR, NULL) )
-    {
-        FreeRTOS_Error("Could not create a print gate keeper task\r\n");
-    }
-    else
-    {
-       vDirectPrintMsg("Created printGateKeeperTask\n");
-    }
+    /* Create tcp_ip stack thread */
+    printf_("Loading lwIP v%s ... \n", LWIP_VERSION_STRING);
+    tcpip_init( NULL, NULL );	
+    printf_("lwIP v%s is ready.\n", LWIP_VERSION_STRING);
 
-    if ( pdPASS != xTaskCreate(recvTask, "recv", 128, NULL, PRIOR_RECEIVER, NULL) )
-    {
-        FreeRTOS_Error("Could not create a receiver task\r\n");
-    }
-    else
-    {
-       vDirectPrintMsg("Created recvTask\n");
-    }
+    /* Initilaize the LwIP stack and interfaces */
+    
+    lwip_network_init();
+    
+    /* Initialize webserver demo */
+    
+    //http_server_socket_init();
 
-    demoTasks();
-
-    vDirectPrintMsg("A text may be entered using a keyboard.\r\n");
-    vDirectPrintMsg("It will be displayed when 'Enter' is pressed.\r\n\r\n");
-
-#if 1
+#if 0
     /*
     ** Create the Startup Task - This is where all the rest of the Application tasks are created
     */
@@ -164,17 +126,20 @@ void main(void)
     }
 #endif
 
-    /* 
-    ** Start the FreeRTOS scheduler 
-    */
+
+#ifdef USE_DHCP
+  /* Start DHCPClient */
+  xTaskCreate(LwIP_DHCP_task, (int8_t *) "DHCP", configMINIMAL_STACK_SIZE * 2, NULL,DHCP_TASK_PRIO, NULL);
+#endif
+
     vTaskStartScheduler();
 
     /*
-    ** If all goes well, vTaskStartScheduler should never return.
+    ** vTaskStartScheduler should never return.
     ** If it does return, typically not enough heap memory is reserved.
     */
-    FreeRTOS_Error("Could not start the scheduler!!!\r\n");
+    printf_("We should never reach here. System Halt.\n");
 
     /* just in case if an infinite loop is somehow omitted in FreeRTOS_Error */
-    for ( ; ; );
+    while ( 1 );
 }

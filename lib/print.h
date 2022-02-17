@@ -42,7 +42,7 @@ void vPrintMsg(const portCHAR* msg);
 
 void vPrintChar(portCHAR ch);
 
-void vDirectPrintMsg(const portCHAR* msg);
+extern void vDirectPrintMsg(const portCHAR* msg);
 
 void vDirectPrintCh(portCHAR ch);
 

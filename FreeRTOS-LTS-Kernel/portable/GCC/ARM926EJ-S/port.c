@@ -58,7 +58,7 @@
 
 /* Includes for functions to peripherals' drivers: */
 #include "bsp.h"
-#include "interrupt.h"
+#include "pic.h"
 #include "timer.h"
 #include "tick_timer_settings.h"
 

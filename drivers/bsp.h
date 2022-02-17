@@ -62,16 +62,21 @@
 #ifndef _BSP_H_
 #define _BSP_H_
 
-
-
 /* Base address of the Primary Interrupt Controller (see page 4-44 of the DUI0225D): */
 #define BSP_PIC_BASE_ADDRESS        ( 0x10140000 )
 
 /* Base address of the Secondary Interrupt Controller (see page 4-44 of the DUI0225D): */
 #define BSP_SIC_BASE_ADDRESS        ( 0x10003000 )
 
-
-
+#define CPU_MODE_USER       0x10
+#define CPU_MODE_FIQ        0x11
+#define CPU_MODE_IRQ        0x12
+#define CPU_MODE_SUPERVISOR 0x13
+#define CPU_MODE_ABORT      0x17
+#define CPU_MODE_UNDEFINED  0x1B
+#define CPU_MODE_SYSTEM     0x1F
+#define CPU_F_BIT           0x40
+#define CPU_I_BIT           0x80
 
 /*
  * Base addresses and IRQs of all 3 UARTs
@@ -123,7 +128,16 @@
 
 #define BSP_WATCHDOG_IRQ            ( 0 )
 
+/*
+ * Base address and IRQ of the built-in ETH controller
+ * (see page 4-72 of the DUI0225D):
+ */
+/* --------------------------------------------------------
+ * Note: differ from UART (4KB region), ETH has 64KB region
+ */
+#define BSP_ETH_BASE_ADDRESS   ( 0x10010000 )
 
+#define BSP_ETH_IRQ            ( 25 )
 
 /*
  * IRQ, reserved for software generated interrupts.
@@ -132,5 +146,6 @@
 
 #define BSP_SOFTWARE_IRQ            ( 1 )
 
+void _init(void);
 
 #endif   /* _BSP_H_ */

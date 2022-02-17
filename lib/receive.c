@@ -33,12 +33,12 @@
 #include <queue.h>
 #include <task.h>
 
-#include "app_config.h"
 #include "bsp.h"
 #include "uart.h"
-#include "interrupt.h"
+#include "pic.h"
 
 #include "print.h"
+#include "console.h"
 
 
 /* Numeric codes for special keys: */

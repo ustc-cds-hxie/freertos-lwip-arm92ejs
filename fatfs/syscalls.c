@@ -14,7 +14,6 @@
 
 #include <FreeRTOS.h>
 #include <task.h>
-#include "app_config.h"
 #include "print.h"
 #include "bsp.h"
 #include "uart.h"

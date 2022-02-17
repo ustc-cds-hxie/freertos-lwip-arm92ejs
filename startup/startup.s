@@ -151,7 +151,10 @@ bss_clear_loop:
     @ Return to Supervisor mode. When the first task starts it will switch
     @ to System mode and enable IRQ triggering.
     BIC r1, r1, #PSR_MASK
-    ORR r1, r1, #MODE_SVC
+
+    @ enter supervisor mode
+    //ORR r1, r1, #MODE_SVC
+    ORR r1, r1, #IRQ_BIT|MODE_SVC
     MSR cpsr, r1
 
     BL _init                               @ before the application is started, initialize all hardware

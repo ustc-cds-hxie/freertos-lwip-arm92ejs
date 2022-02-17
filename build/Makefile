@@ -26,13 +26,12 @@ OBJCOPY = $(TOOLCHAIN)objcopy
 AR = $(TOOLCHAIN)ar
 
 # GCC flags
-CFLAG = -c
-OFLAG = -o
 INCLUDEFLAG = -I
 CPUFLAG = -mcpu=arm926ej-s  
-WFLAG = -Wall -Wextra -Werror
+#WFLAG = -Wall -Wextra -Werror
+WFLAG = 
 # CFLAGS = $(CPUFLAG) $(WFLAG) --specs=nano.specs
-CFLAGS = $(CPUFLAG) $(WFLAG) 
+CFLAGS = -g -O0 $(CPUFLAG) $(WFLAG) 
 
 # Additional C compiler flags to produce debugging symbols
 DEB_FLAG = -g -DDEBUG
@@ -100,22 +99,30 @@ FREERTOS_FAT_OBJS = ff_crc.o ff_dir.o ff_error.o ff_fat.o ff_file.o ff_format.o 
 FREERTOS_FAT_OBJS += ff_locking.o ff_memory.o ff_stdio.o ff_string.o ff_sys.o ff_time.o
 FREERTOS_FAT_PORTABLE_OBJS = ff_ramdisk.o
 
+LWIP_OBJS = dhcp.o acd.o err.o tcpip.o sys_arch.o \
+              init.o def.o dns.o inet_chksum.o ip.o mem.o memp.o netif.o \
+              pbuf.o raw.o stats.o sys.o altcp.o altcp_alloc.o altcp_tcp.o \
+              tcp.o tcp_in.o tcp_out.o timeouts.o udp.o icmp.o ip4.o \
+              ip4_addr.o ip4_frag.o ethernet.o etharp.o
+
+LWIP_INCS = -I $(SRCDIR)/lwip/src/include/
+
 STARTUP_ASM_OBJ = startup.o
 
-STARTUP_OBJS = init.o main.o print.o receive.o
+STARTUP_OBJS = main.o
 
 FATFS_OBJS = syscalls.o ramdisk.o untar.o
 
-DRIVERS_OBJS = timer.o interrupt.o uart.o 
+DRIVERS_OBJS = timer.o pic.o sic.o uart.o bsp.o ethernetif.o lan91c.o console.o
 
-APP_OBJS = app_init.o
-# APP_OBJS = cfs_init.o
+APP_OBJS = demotasks.o disktest.o
 
 # nostdlib.o must be commented out if standard lib is going to be linked!
-# APP_OBJS += nostdlib.o
+#LIB_OBJS = nostdlib.o
+LIB_OBJS += print.o receive.o printf.o debug.o
 
 # All object files
-OBJS = $(STARTUP_ASM_OBJ) $(STARTUP_OBJS) $(FATFS_OBJS) $(FREERTOS_OBJS) $(FREERTOS_MEMMANG_OBJS) $(FREERTOS_PORT_OBJS) $(FREERTOS_FAT_OBJS) $(FREERTOS_FAT_PORTABLE_OBJS) $(DRIVERS_OBJS) $(APP_OBJS) tarfile.o
+OBJS = $(STARTUP_ASM_OBJ) $(STARTUP_OBJS) $(FATFS_OBJS) $(FREERTOS_OBJS) $(FREERTOS_MEMMANG_OBJS) $(FREERTOS_PORT_OBJS) $(FREERTOS_FAT_OBJS) $(FREERTOS_FAT_PORTABLE_OBJS) $(DRIVERS_OBJS) $(APP_OBJS) $(LWIP_OBJS) $(LIB_OBJS) tarfile.o
 
 # Definition of the linker script and final targets
 LINKER_SCRIPT = $(addprefix $(STARTUP_SRC), qemu.ld)
@@ -129,11 +136,10 @@ INC_FREERTOS_FAT_PORTABLE = $(FREERTOS_FAT_SRC)portable/common
 INC_DRIVERS = $(DRIVERS_SRC)
 
 # Complete include flags to be passed to $(CC) where necessary
-INC_FLAGS = $(INCLUDEFLAG)$(INC_FREERTOS) $(INCLUDEFLAG)$(STARTUP_SRC) $(INCLUDEFLAG)$(APP_SRC) $(INCLUDEFLAG)$(FATFS_SRC) $(INCLUDEFLAG)$(FREERTOS_PORT_SRC) $(INCLUDEFLAG)$(LIB_SRC) $(INCLUDEFLAG)$(INC_FREERTOS_FAT) $(INCLUDEFLAG)$(INC_FREERTOS_FAT_PORTABLE)
-INC_FLAG_DRIVERS = $(INCLUDEFLAG)$(INC_DRIVERS)
+INC_FLAGS = $(INCLUDEFLAG)$(INC_FREERTOS) $(INCLUDEFLAG)$(STARTUP_SRC) $(INCLUDEFLAG)$(APP_SRC) $(INCLUDEFLAG)$(FATFS_SRC) $(INCLUDEFLAG)$(FREERTOS_PORT_SRC) $(INCLUDEFLAG)$(LIB_SRC) $(INCLUDEFLAG)$(INC_FREERTOS_FAT) $(INCLUDEFLAG)$(INC_FREERTOS_FAT_PORTABLE) $(LWIP_INCS) $(INCLUDEFLAG)$(INC_DRIVERS)
 
 # Dependency on HW specific settings
-DEP_BSP = $(INC_DRIVERS)bsp.h
+#DEP_BSP = $(INC_DRIVERS)bsp.h
 
 #
 # Make rules:
@@ -145,7 +151,27 @@ DEP_BSP = $(INC_DRIVERS)bsp.h
 #	echo $(LIBGCC)
 #
 
+vpath %.c $(SRCDIR)/lwip/src/ $(SRCDIR)/lwip/src/api/ $(SRCDIR)/lwip/src/core/ $(SRCDIR)/lwip/src/netif/ $(SRCDIR)/lwip/src/core/ipv4/ \
+	$(FREERTOS_SRC) \
+	$(FREERTOS_MEMMANG_SRC) \
+	$(FREERTOS_PORT_SRC) \
+	$(FREERTOS_FAT_SRC) \
+	$(FREERTOS_FAT_PORTABLE_SRC) \
+	$(DRIVERS_SRC) \
+	$(STARTUP_SRC) \
+	$(FATFS_SRC) \
+	$(APP_SRC) \
+	$(LIB_SRC) \
+
+.PHONY: all clean run
+
 all : $(TARGET)
+
+%.o : %.c
+	$(CC) -g -c -o $@ $(CFLAGS) $(INC_FLAGS) -o $@ $<
+
+%.o : $(STARTUP_SRC)/%.s
+	$(AS) -g -c -o $@ $(CPUFLAG) $<
 
 rebuild : clean all
 
@@ -153,160 +179,16 @@ $(TARGET) : $(ELF_IMAGE)
 	$(OBJCOPY) -O binary $(ELF_IMAGE) $@
 
 $(ELF_IMAGE) : $(OBJS) $(LINKER_SCRIPT)
-	$(LD) -T $(LINKER_SCRIPT) $(OBJS) $(OFLAG) $@  $(LIBC) $(LIBM) $(LIBGCC) 
+	$(LD) -T $(LINKER_SCRIPT) $(OBJS) -o $@  $(LIBC) $(LIBM) $(LIBGCC) 
 #	$(LD) -L $(OBJDIR) -T $(LINKER_SCRIPT) $(OBJS) $(OFLAG) $@  $(LIBDIR)/libc.a $(LIBDIR)/libm.a $(GCCLIBDIR)/libgcc.a 
 #	$(LD) -L $(OBJDIR) -T $(LINKER_SCRIPT) $(OBJS) $(OFLAG) $@  $(LIBDIR)/libc_nano.a 
 #	$(LD) -nostdlib -L $(OBJDIR) -T $(LINKER_SCRIPT) $(OBJS) $(OFLAG) $@ 
 
-debug : _debug_flags all
+run : $(TARGET)
+	qemu-system-arm -M versatilepb -nographic -m 128 -semihosting -kernel $< -net nic,model=smc91c111 -net tap,ifname=tap0,script=no,downscript=no
 
-debug_rebuild : _debug_flags rebuild
-
-_debug_flags :
-	$(eval CFLAGS += $(DEB_FLAG))
-
-# Startup code, implemented in assembler
-
-startup.o : $(STARTUP_SRC)startup.s
-	$(AS) $(CPUFLAG) $< $(OFLAG) $@
-
-# FreeRTOS core
-
-queue.o : $(FREERTOS_SRC)queue.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $< $(OFLAG) $@
-
-list.o : $(FREERTOS_SRC)list.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $< $(OFLAG) $@
-
-tasks.o : $(FREERTOS_SRC)tasks.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $< $(OFLAG) $@
-
-timers.o : $(FREERTOS_SRC)timers.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $< $(OFLAG) $@
-
-croutine.o : $(FREERTOS_SRC)croutine.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $< $(OFLAG) $@
-
-event_groups.o : $(FREERTOS_SRC)event_groups.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $< $(OFLAG) $@
-
-# HW specific part, in FreeRTOS/Source/portable/$(PORT_COMP_TARGET)
-
-port.o : $(FREERTOS_PORT_SRC)port.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $(INC_FLAG_DRIVERS) $< $(OFLAG) $@
-
-portISR.o : $(FREERTOS_PORT_SRC)portISR.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $(INC_FLAG_DRIVERS) $< $(OFLAG) $@
-
-# Rules for all MemMang implementations are provided
-# Only one of these object files must be linked to the final target
-
-heap_1.o : $(FREERTOS_MEMMANG_SRC)heap_1.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $< $(OFLAG) $@
-
-heap_2.o : $(FREERTOS_MEMMANG_SRC)heap_2.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $< $(OFLAG) $@
-
-heap_3.o : $(FREERTOS_MEMMANG_SRC)heap_3.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $< $(OFLAG) $@
-
-heap_4.o : $(FREERTOS_MEMMANG_SRC)heap_4.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $< $(OFLAG) $@
-
-heap_5.o : $(FREERTOS_MEMMANG_SRC)heap_5.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $< $(OFLAG) $@
-
-# FreeRTOS FAT 
-ff_crc.o : $(FREERTOS_FAT_SRC)ff_crc.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $< $(OFLAG) $@
-
-# ff_dev_support.o : $(FREERTOS_FAT_SRC)ff_dev_support.c
-#	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $< $(OFLAG) $@
-
-ff_dir.o : $(FREERTOS_FAT_SRC)ff_dir.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $< $(OFLAG) $@
-
-ff_error.o : $(FREERTOS_FAT_SRC)ff_error.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $< $(OFLAG) $@
-
-ff_fat.o : $(FREERTOS_FAT_SRC)ff_fat.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $< $(OFLAG) $@
-
-ff_file.o : $(FREERTOS_FAT_SRC)ff_file.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $< $(OFLAG) $@
-
-ff_format.o : $(FREERTOS_FAT_SRC)ff_format.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $< $(OFLAG) $@
-
-ff_ioman.o : $(FREERTOS_FAT_SRC)ff_ioman.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $< $(OFLAG) $@
-
-ff_locking.o : $(FREERTOS_FAT_SRC)ff_locking.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $< $(OFLAG) $@
-
-ff_memory.o : $(FREERTOS_FAT_SRC)ff_memory.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $< $(OFLAG) $@
-
-ff_stdio.o : $(FREERTOS_FAT_SRC)ff_stdio.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $< $(OFLAG) $@
-
-ff_string.o : $(FREERTOS_FAT_SRC)ff_string.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $< $(OFLAG) $@
-
-ff_sys.o : $(FREERTOS_FAT_SRC)ff_sys.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $< $(OFLAG) $@
-
-ff_time.o : $(FREERTOS_FAT_SRC)ff_time.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $< $(OFLAG) $@
-
-# Drivers
-
-timer.o : $(DRIVERS_SRC)timer.c $(DEP_BSP)
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAG_DRIVERS) $< $(OFLAG) $@
-
-interrupt.o : $(DRIVERS_SRC)interrupt.c $(DEP_BSP)
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAG_DRIVERS) $< $(OFLAG) $@
-
-uart.o : $(DRIVERS_SRC)uart.c $(DEP_BSP)
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAG_DRIVERS) $< $(OFLAG) $@
-
-ff_ramdisk.o : $(FREERTOS_FAT_PORTABLE_SRC)ff_ramdisk.c $(DEP_BSP)
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAG_DRIVERS) $(INC_FLAGS) $< $(OFLAG) $@
-
-# Startup files
-
-main.o : $(STARTUP_SRC)main.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $< $(OFLAG) $@
-
-init.o : $(STARTUP_SRC)init.c $(DEP_BSP)
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAG_DRIVERS) $< $(OFLAG) $@
-
-ramdisk.o : $(FATFS_SRC)ramdisk.c $(DEP_BSP)
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $(INC_FLAG_DRIVERS) $< $(OFLAG) $@
-
-# App files
-
-app_init.o : $(APP_SRC)app_init.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $< $(OFLAG) $@
-
-cfs_init.o : $(APP_SRC)cfs_init.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $(INC_FLAG_DRIVERS) $< $(OFLAG) $@
-
-# Lib functions
-print.o : $(LIB_SRC)print.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $(INC_FLAG_DRIVERS) $< $(OFLAG) $@
-
-receive.o : $(LIB_SRC)receive.c $(DEP_BSP)
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $(INC_FLAG_DRIVERS) $< $(OFLAG) $@
-
-nostdlib.o : $(LIB_SRC)nostdlib.c
-	$(CC) $(CFLAG) $(CFLAGS) $< $(OFLAG) $@
-
-syscalls.o : $(FATFS_SRC)syscalls.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $(INC_FLAG_DRIVERS) $< $(OFLAG) $@
-
-untar.o : $(FATFS_SRC)untar.c
-	$(CC) $(CFLAG) $(CFLAGS) $(INC_FLAGS) $(INC_FLAG_DRIVERS) $< $(OFLAG) $@
+debug : $(TARGET)
+	qemu-system-arm -M versatilepb -nographic -m 128 -semihosting -kernel $< -s -S -net nic,model=smc91c111 -net tap,ifname=tap0,script=no,downscript=no
 
 #
 # Tar file

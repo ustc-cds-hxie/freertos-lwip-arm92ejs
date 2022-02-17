@@ -32,7 +32,7 @@
 #include <queue.h>
 #include <string.h>
 
-#include "app_config.h"
+#include "console.h"
 #include "bsp.h"
 #include "uart.h"
 #include "print.h"
@@ -162,7 +162,9 @@ void vPrintMsg(const portCHAR* msg)
         qRetStatus = xQueueSendToBack(printQueue, (void*) &msg, 0);
         if (qRetStatus != pdTRUE )
         {
+#if PRINT_DEBUG
            uart_print(printUartNr, "GateKeeper Print Queue Full!\n");
+#endif
         }
     }
 }
