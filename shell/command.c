@@ -1,9 +1,8 @@
-
 /****************************************************************************
  * Copyright (c) 2021, 2022, Haiyong Xie
  * All rights reserved.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not 
  * use this file except in compliance with the License. You may obtain a copy 
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  * 
@@ -31,62 +30,60 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ****************************************************************************/
 
-#include <stddef.h>
-
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdbool.h>
-
-#include <FreeRTOS.h>
-#include <task.h>
-
-#include "receive.h"
-#include "print.h"
+#include "FreeRTOS.h"
+#include "task.h"
 #include "printf.h"
-#include "console.h"
-#include "debug.h"
+#include "command.h"
 
+#define MAX_COMMAND_BUF_SIZE 1024
 
-void consoleInit(void)
+static char buf[MAX_COMMAND_BUF_SIZE];
+
+/****************************************************************************
+ *
+ ****************************************************************************/
+const ShellCmd SHELL_CMDS[] =
 {
-/* Init of print related tasks: */
-    if ( pdFAIL == printInit(PRINT_UART_NR) )
-    {
-        SANE_PLATFORM_ERROR(("Initialization of print failed\r\n"));
-    }
-
-    /* 
-    ** Init of receiver related tasks: 
-    */
-    if ( pdFAIL == recvInit(RECV_UART_NR) )
-    {
-        SANE_PLATFORM_ERROR(("Initialization of receiver failed\r\n"));
-    }
-
-    /* 
-    ** Create a print gate keeper task: 
-    */
-    if ( pdPASS != xTaskCreate(printGateKeeperTask, "stdout", 128, NULL,
-                               PRIOR_PRINT_GATEKEEPR, NULL) )
-    {
-        SANE_PLATFORM_ERROR(("Could not create a print gate keeper task\r\n"));
-    }
-    else
-    {
-       SANE_DEBUGF(SANE_DBG_CONSOLE, ("Created printGateKeeperTask\n"));
-    }
-
-#define USE_SHELL
-
-#ifndef USE_SHELL
-    if ( pdPASS != xTaskCreate(recvTask, "recv", 128, NULL, PRIOR_RECEIVER, NULL) )
-    {
-        FreeRTOS_Error("Could not create a receiver task\r\n");
-    }
-    else
-    {
-       SANE_DEBUGF(SANE_DBG_CONSOLE, ("Created recvTask\n"));
-    }
+#if 0
+   {"pwd", "current directory", fsUtils_pwd},
+   {"cd", "change directory", fsUtils_cd},
+   {"ls", "list files in current directory", fsUtils_ls},
+   {"cat", "display content of a file", fsUtils_cat},
+   {"lsof", "list open file handlers", vfsInfo},
+   {"ifconfig", "ifconfig <interface> <IP> <netmask> <gateway>", netIfconfig},
+   {"ping", "ping <IP>", cmdPing},
 #endif
+   {"top", "Display threads information", cmdTop},
+
+   {"help", "display help message", cmdHelp},
+   {NULL, NULL}
+};
+
+void cmdTop(int argc, char* argv[])
+{
+    vTaskList(buf); 
+    printf_("Task Name\tStat\tPrio\tRStack\tTID\n");
+    printf_(buf);
 }
+
+void cmdHelp(int argc, char *argv[])
+{
+   printf("List of shell commands:\n");
+   for (int i = 0; SHELL_CMDS[i].name != NULL; i++)
+   {
+      printf("%d: %s\n\t%s\n", i, SHELL_CMDS[i].name, SHELL_CMDS[i].helpmsg);
+   }
+}
+#if 0
+void cmdPing(int argc, char *argv[])
+{
+   if (argc != 2) {
+      printf("Usage: ping [destination]\n");
+      return;
+   }
+
+   ip_addr_t target;
+   target.addr = inet_addr(argv[1]);
+   ping_thread((void *)&target);
+}
+#endif

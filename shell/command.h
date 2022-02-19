@@ -1,9 +1,8 @@
-
 /****************************************************************************
  * Copyright (c) 2021, 2022, Haiyong Xie
  * All rights reserved.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not 
  * use this file except in compliance with the License. You may obtain a copy 
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  * 
@@ -31,62 +30,15 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ****************************************************************************/
 
-#include <stddef.h>
+#ifndef _COMMAND_H_
+#define _COMMAND_H_
 
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdbool.h>
+#include "shell.h"
 
-#include <FreeRTOS.h>
-#include <task.h>
+extern const ShellCmd SHELL_CMDS[];
 
-#include "receive.h"
-#include "print.h"
-#include "printf.h"
-#include "console.h"
-#include "debug.h"
+void cmdTop(int argc, char* argv[]);
+void cmdPing(int argc, char* argv[]);
+void cmdHelp(int argc, char* argv[]);
 
-
-void consoleInit(void)
-{
-/* Init of print related tasks: */
-    if ( pdFAIL == printInit(PRINT_UART_NR) )
-    {
-        SANE_PLATFORM_ERROR(("Initialization of print failed\r\n"));
-    }
-
-    /* 
-    ** Init of receiver related tasks: 
-    */
-    if ( pdFAIL == recvInit(RECV_UART_NR) )
-    {
-        SANE_PLATFORM_ERROR(("Initialization of receiver failed\r\n"));
-    }
-
-    /* 
-    ** Create a print gate keeper task: 
-    */
-    if ( pdPASS != xTaskCreate(printGateKeeperTask, "stdout", 128, NULL,
-                               PRIOR_PRINT_GATEKEEPR, NULL) )
-    {
-        SANE_PLATFORM_ERROR(("Could not create a print gate keeper task\r\n"));
-    }
-    else
-    {
-       SANE_DEBUGF(SANE_DBG_CONSOLE, ("Created printGateKeeperTask\n"));
-    }
-
-#define USE_SHELL
-
-#ifndef USE_SHELL
-    if ( pdPASS != xTaskCreate(recvTask, "recv", 128, NULL, PRIOR_RECEIVER, NULL) )
-    {
-        FreeRTOS_Error("Could not create a receiver task\r\n");
-    }
-    else
-    {
-       SANE_DEBUGF(SANE_DBG_CONSOLE, ("Created recvTask\n"));
-    }
 #endif
-}

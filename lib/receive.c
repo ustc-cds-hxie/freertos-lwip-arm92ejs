@@ -158,6 +158,13 @@ static void recvIsrHandler(void)
     uart_clearRxInterrupt(recvUartNr);
 }
 
+char getChar()
+{
+   char ch;
+   /* The task is blocked until something appears in the queue */
+   xQueueReceive(recvQueue, (void*) &ch, portMAX_DELAY);
+   return ch;
+}
 
 /**
  * A FreeRTOS task that processes received characters.

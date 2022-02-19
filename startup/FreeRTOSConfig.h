@@ -90,15 +90,25 @@
 #define configTICK_RATE_HZ                ( ( TickType_t ) 1000 )
 #define configMAX_PRIORITIES              ( 5 )
 #define configMINIMAL_STACK_SIZE          ( ( StackType_t ) 128 )
-#define configTOTAL_HEAP_SIZE             ( ( size_t ) ( 1024 * 1024 ) )
-/* #define configTOTAL_HEAP_SIZE             ( ( size_t ) ( 20480 ) ) */
+
 #define configMAX_TASK_NAME_LEN           ( 16 )
-#define configUSE_TRACE_FACILITY          0
+
 #define configUSE_16_BIT_TICKS            0
 #define configIDLE_SHOULD_YIELD           1
 #define configUSE_APPLICATION_TASK_TAG    1
 
 #define configUSE_MUTEXES                 1
+
+/* Memory allocation related definitions. */
+#define configSUPPORT_STATIC_ALLOCATION         0
+#define configSUPPORT_DYNAMIC_ALLOCATION        1
+#define configTOTAL_HEAP_SIZE             ( ( size_t ) ( 1024 * 1024 ) )
+#define configAPPLICATION_ALLOCATED_HEAP        0
+
+/* Run time and task stats gathering related definitions. */
+#define configGENERATE_RUN_TIME_STATS           1
+#define configUSE_TRACE_FACILITY                1
+#define configUSE_STATS_FORMATTING_FUNCTIONS    1
 
 /* Co-routine definitions. */
 #define configUSE_CO_ROUTINES             0
@@ -148,5 +158,10 @@ NVIC value of 255. */
 
 extern void vAssertCalled( const char *pcFile, uint32_t ulLine );
 #define configASSERT( x )  if( ( x ) == 0 ) vAssertCalled( __FILE__, __LINE__ )
+
+extern volatile unsigned int g_cpu_runtime;
+
+#define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() (g_cpu_runtime = 0ul)
+#define portGET_RUN_TIME_COUNTER_VALUE() g_cpu_runtime
 
 #endif /* FREERTOS_CONFIG_H */

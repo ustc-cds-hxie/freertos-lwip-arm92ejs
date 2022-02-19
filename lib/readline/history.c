@@ -1,9 +1,8 @@
-
 /****************************************************************************
  * Copyright (c) 2021, 2022, Haiyong Xie
  * All rights reserved.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not 
  * use this file except in compliance with the License. You may obtain a copy 
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  * 
@@ -31,62 +30,58 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ****************************************************************************/
 
-#include <stddef.h>
-
-#include <string.h>
-#include <stdlib.h>
 #include <stdio.h>
-#include <stdbool.h>
+#include <string.h>
 
-#include <FreeRTOS.h>
-#include <task.h>
+#include "readline.h"
+#include "history.h"
+#include "shell.h"
 
-#include "receive.h"
-#include "print.h"
-#include "printf.h"
-#include "console.h"
-#include "debug.h"
-
-
-void consoleInit(void)
+void add_history(char* line)
 {
-/* Init of print related tasks: */
-    if ( pdFAIL == printInit(PRINT_UART_NR) )
-    {
-        SANE_PLATFORM_ERROR(("Initialization of print failed\r\n"));
-    }
+   HistoryData* history = getHistoryData();
+   unsigned int i = 0;
 
-    /* 
-    ** Init of receiver related tasks: 
-    */
-    if ( pdFAIL == recvInit(RECV_UART_NR) )
-    {
-        SANE_PLATFORM_ERROR(("Initialization of receiver failed\r\n"));
-    }
+   if ((history == NULL) || (history->size == 0))
+      return;
 
-    /* 
-    ** Create a print gate keeper task: 
-    */
-    if ( pdPASS != xTaskCreate(printGateKeeperTask, "stdout", 128, NULL,
-                               PRIOR_PRINT_GATEKEEPR, NULL) )
-    {
-        SANE_PLATFORM_ERROR(("Could not create a print gate keeper task\r\n"));
-    }
-    else
-    {
-       SANE_DEBUGF(SANE_DBG_CONSOLE, ("Created printGateKeeperTask\n"));
-    }
+   while ((i < history->size) && (history->buffer[i] != NULL))
+      i++;
 
-#define USE_SHELL
+   if (i == history->size)
+   {
+      i--;
+      rl_free(history->buffer[i]);
+      history->buffer[i] = NULL;
+   }
 
-#ifndef USE_SHELL
-    if ( pdPASS != xTaskCreate(recvTask, "recv", 128, NULL, PRIOR_RECEIVER, NULL) )
-    {
-        FreeRTOS_Error("Could not create a receiver task\r\n");
-    }
-    else
-    {
-       SANE_DEBUGF(SANE_DBG_CONSOLE, ("Created recvTask\n"));
-    }
-#endif
+   char* tmp = rl_realloc(NULL, strlen(line) + 1);
+
+   if (tmp == NULL)
+      return;
+
+   while (i > 0)
+   {
+      history->buffer[i] = history->buffer[i - 1];
+      i--;
+   }
+
+   history->buffer[0] = tmp;
+   strcpy(history->buffer[0], line);
+}
+
+void clear_history()
+{
+   HistoryData* history = getHistoryData();
+
+   if (history != NULL)
+   {
+      unsigned int i = 0;
+
+      while ((i < history->size) && (history->buffer[i] != NULL))
+      {
+         rl_free(history->buffer[i]);
+         history->buffer[i++] = NULL;
+      }
+   }
 }

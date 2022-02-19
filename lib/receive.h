@@ -35,6 +35,8 @@
 
 int16_t recvInit(uint8_t uart_nr);
 
+char getChar();
+
 void recvTask(void* params);
 
 

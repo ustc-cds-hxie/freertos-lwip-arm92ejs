@@ -53,16 +53,7 @@
 #include "console.h"
 #include "debug.h"
 
-/*
-** Startup task
-*/
-void startupTask(void* pvParameters);
-
-/*
-** demo task functions defined in app_init.c
-*/
-void demoTasks();
-
+volatile unsigned int g_cpu_runtime;
 
 void show_version( void )
 {
@@ -114,6 +105,8 @@ void main(void)
     
     //http_server_socket_init();
 
+    /* start shell */
+    start_shell_task();
 
 #ifdef USE_DHCP
   /* Start DHCPClient */

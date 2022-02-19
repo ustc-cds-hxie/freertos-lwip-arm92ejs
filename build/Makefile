@@ -72,8 +72,12 @@ FATFS_SRC = $(SRCDIR)/fatfs/
 # Directory with demo specific source (and header) files
 APP_SRC = $(SRCDIR)/app/
 
+# shell
+SHELL_SRC = $(SRCDIR)/shell
+
 # Directory with demo specific source (and header) files
 LIB_SRC = $(SRCDIR)/lib/
+LIB_READLINE_SRC = $(SRCDIR)/lib/readline
 
 # Object files to be linked into an application
 # Due to a large number, the .o files are arranged into logical groups:
@@ -117,12 +121,14 @@ DRIVERS_OBJS = timer.o pic.o sic.o uart.o bsp.o ethernetif.o lan91c.o console.o
 
 APP_OBJS = demotasks.o disktest.o
 
+SHELL_OBJS = shell.o command.o
+
 # nostdlib.o must be commented out if standard lib is going to be linked!
 #LIB_OBJS = nostdlib.o
-LIB_OBJS += print.o receive.o printf.o debug.o
+LIB_OBJS += print.o receive.o printf.o debug.o readline.o history.o
 
 # All object files
-OBJS = $(STARTUP_ASM_OBJ) $(STARTUP_OBJS) $(FATFS_OBJS) $(FREERTOS_OBJS) $(FREERTOS_MEMMANG_OBJS) $(FREERTOS_PORT_OBJS) $(FREERTOS_FAT_OBJS) $(FREERTOS_FAT_PORTABLE_OBJS) $(DRIVERS_OBJS) $(APP_OBJS) $(LWIP_OBJS) $(LIB_OBJS) tarfile.o
+OBJS = $(STARTUP_ASM_OBJ) $(STARTUP_OBJS) $(FATFS_OBJS) $(FREERTOS_OBJS) $(FREERTOS_MEMMANG_OBJS) $(FREERTOS_PORT_OBJS) $(FREERTOS_FAT_OBJS) $(FREERTOS_FAT_PORTABLE_OBJS) $(DRIVERS_OBJS) $(APP_OBJS) $(LWIP_OBJS) $(LIB_OBJS) $(SHELL_OBJS) tarfile.o
 
 # Definition of the linker script and final targets
 LINKER_SCRIPT = $(addprefix $(STARTUP_SRC), qemu.ld)
@@ -130,13 +136,18 @@ ELF_IMAGE = image.elf
 TARGET = image.bin
 
 # Include paths to be passed to $(CC) where necessary
-INC_FREERTOS = $(FREERTOS_SRC)include/
-INC_FREERTOS_FAT = $(FREERTOS_FAT_SRC)include/
-INC_FREERTOS_FAT_PORTABLE = $(FREERTOS_FAT_SRC)portable/common
-INC_DRIVERS = $(DRIVERS_SRC)
+INC_FREERTOS = -I $(FREERTOS_SRC)include/
+INC_FREERTOS_FAT = -I $(FREERTOS_FAT_SRC)include/
+INC_FREERTOS_FAT_PORTABLE = -I $(FREERTOS_FAT_SRC)portable/common
+INC_DRIVERS = -I $(DRIVERS_SRC)
+INC_LIB = -I $(LIB_SRC)
+INC_LIB_READLINE = -I $(LIB_READLINE_SRC)
+INC_SHELL = -I $(SHELL_SRC)
 
 # Complete include flags to be passed to $(CC) where necessary
-INC_FLAGS = $(INCLUDEFLAG)$(INC_FREERTOS) $(INCLUDEFLAG)$(STARTUP_SRC) $(INCLUDEFLAG)$(APP_SRC) $(INCLUDEFLAG)$(FATFS_SRC) $(INCLUDEFLAG)$(FREERTOS_PORT_SRC) $(INCLUDEFLAG)$(LIB_SRC) $(INCLUDEFLAG)$(INC_FREERTOS_FAT) $(INCLUDEFLAG)$(INC_FREERTOS_FAT_PORTABLE) $(LWIP_INCS) $(INCLUDEFLAG)$(INC_DRIVERS)
+INC_FLAGS = -I $(STARTUP_SRC) -I $(APP_SRC) -I $(FATFS_SRC) -I $(FREERTOS_PORT_SRC) \
+			$(INC_LIB) $(INC_FREERTOS) $(INC_FREERTOS_FAT) $(INC_FREERTOS_FAT_PORTABLE) $(LWIP_INCS) \
+			$(INC_DRIVERS) $(INC_LIB_READLINE) $(INC_SHELL)
 
 # Dependency on HW specific settings
 #DEP_BSP = $(INC_DRIVERS)bsp.h
@@ -162,6 +173,8 @@ vpath %.c $(SRCDIR)/lwip/src/ $(SRCDIR)/lwip/src/api/ $(SRCDIR)/lwip/src/core/ $
 	$(FATFS_SRC) \
 	$(APP_SRC) \
 	$(LIB_SRC) \
+	$(SHELL_SRC) \
+	$(LIB_READLINE_SRC)
 
 .PHONY: all clean run
 

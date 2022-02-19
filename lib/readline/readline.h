@@ -1,9 +1,8 @@
-
 /****************************************************************************
  * Copyright (c) 2021, 2022, Haiyong Xie
  * All rights reserved.
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not 
  * use this file except in compliance with the License. You may obtain a copy 
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  * 
@@ -31,62 +30,23 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ****************************************************************************/
 
-#include <stddef.h>
+#ifndef _READLINE_H_
+#define _READLINE_H_
 
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdbool.h>
+#define rl_free(ptr)
 
-#include <FreeRTOS.h>
-#include <task.h>
+#define READLINE_DATA(n) {0, n, (char[n]) {}}
 
-#include "receive.h"
-#include "print.h"
-#include "printf.h"
-#include "console.h"
-#include "debug.h"
-
-
-void consoleInit(void)
+typedef struct
 {
-/* Init of print related tasks: */
-    if ( pdFAIL == printInit(PRINT_UART_NR) )
-    {
-        SANE_PLATFORM_ERROR(("Initialization of print failed\r\n"));
-    }
+   unsigned int i;
+   unsigned int size;
+   char* buffer;
 
-    /* 
-    ** Init of receiver related tasks: 
-    */
-    if ( pdFAIL == recvInit(RECV_UART_NR) )
-    {
-        SANE_PLATFORM_ERROR(("Initialization of receiver failed\r\n"));
-    }
+} ReadlineData;
 
-    /* 
-    ** Create a print gate keeper task: 
-    */
-    if ( pdPASS != xTaskCreate(printGateKeeperTask, "stdout", 128, NULL,
-                               PRIOR_PRINT_GATEKEEPR, NULL) )
-    {
-        SANE_PLATFORM_ERROR(("Could not create a print gate keeper task\r\n"));
-    }
-    else
-    {
-       SANE_DEBUGF(SANE_DBG_CONSOLE, ("Created printGateKeeperTask\n"));
-    }
+char* rl_realloc(char* ptr, unsigned int length);
 
-#define USE_SHELL
+char* readline(const char* prompt);
 
-#ifndef USE_SHELL
-    if ( pdPASS != xTaskCreate(recvTask, "recv", 128, NULL, PRIOR_RECEIVER, NULL) )
-    {
-        FreeRTOS_Error("Could not create a receiver task\r\n");
-    }
-    else
-    {
-       SANE_DEBUGF(SANE_DBG_CONSOLE, ("Created recvTask\n"));
-    }
 #endif
-}
