@@ -67,7 +67,7 @@ void consoleInit(void)
     /* 
     ** Create a print gate keeper task: 
     */
-    if ( pdPASS != xTaskCreate(printGateKeeperTask, "stdout", 128, NULL,
+    if ( pdPASS != xTaskCreate(printGateKeeperTask, "stdout print", 128, NULL,
                                PRIOR_PRINT_GATEKEEPR, NULL) )
     {
         SANE_PLATFORM_ERROR(("Could not create a print gate keeper task\r\n"));

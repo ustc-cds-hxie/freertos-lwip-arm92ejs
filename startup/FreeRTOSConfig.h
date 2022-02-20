@@ -159,9 +159,7 @@ NVIC value of 255. */
 extern void vAssertCalled( const char *pcFile, uint32_t ulLine );
 #define configASSERT( x )  if( ( x ) == 0 ) vAssertCalled( __FILE__, __LINE__ )
 
-extern volatile unsigned int g_cpu_runtime;
-
-#define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() (g_cpu_runtime = 0ul)
-#define portGET_RUN_TIME_COUNTER_VALUE() g_cpu_runtime
+#define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() {}
+#define portGET_RUN_TIME_COUNTER_VALUE() xTickCount
 
 #endif /* FREERTOS_CONFIG_H */

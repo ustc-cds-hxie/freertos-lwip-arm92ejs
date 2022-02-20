@@ -37,6 +37,7 @@
 
 extern const ShellCmd SHELL_CMDS[];
 
+void cmdPs(int argc, char* argv[]);
 void cmdTop(int argc, char* argv[]);
 void cmdPing(int argc, char* argv[]);
 void cmdHelp(int argc, char* argv[]);

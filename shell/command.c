@@ -53,25 +53,51 @@ const ShellCmd SHELL_CMDS[] =
    {"ifconfig", "ifconfig <interface> <IP> <netmask> <gateway>", netIfconfig},
    {"ping", "ping <IP>", cmdPing},
 #endif
-   {"top", "Display threads information", cmdTop},
-
+   {"ps", "Display threads information", cmdPs},
+   {"top", "Display threads runtime information", cmdTop},
    {"help", "display help message", cmdHelp},
    {NULL, NULL}
 };
 
-void cmdTop(int argc, char* argv[])
+/*
+ * the following three FreeRTOS macros need to be defined in order to call vTaskList()
+ *
+ * configGENERATE_RUN_TIME_STATS
+ * configUSE_TRACE_FACILITY
+ * configUSE_STATS_FORMATTING_FUNCTIONS
+ */
+
+void cmdPs(int argc, char* argv[])
 {
     vTaskList(buf); 
-    printf_("Task Name\tStat\tPrio\tRStack\tTID\n");
+    printf_("Thread Name\tState\tPrio\tRStack\tThreadID\n");
+    printf_("------------------------------------------------\n");
+    printf_(buf);
+}
+
+/*
+ * the following three FreeRTOS macros need to be defined in order to call vTaskGetRunTimeStats()
+ *
+ * configGENERATE_RUN_TIME_STATS
+ * configSUPPORT_DYNAMIC_ALLOCATION
+ * configUSE_STATS_FORMATTING_FUNCTIONS
+ */
+
+void cmdTop(int argc, char* argv[])
+{
+    vTaskGetRunTimeStats(buf); 
+    printf_("Thread Name\tRuntime\t\t%%CPU\n");
+    printf_("------------------------------------\n");
     printf_(buf);
 }
 
 void cmdHelp(int argc, char *argv[])
 {
-   printf("List of shell commands:\n");
+   printf_("Command\t\tUsage\n");
+   printf_("----------------------------------------------\n");
    for (int i = 0; SHELL_CMDS[i].name != NULL; i++)
    {
-      printf("%d: %s\n\t%s\n", i, SHELL_CMDS[i].name, SHELL_CMDS[i].helpmsg);
+      printf("%s\t%s\n", SHELL_CMDS[i].name, SHELL_CMDS[i].helpmsg);
    }
 }
 #if 0

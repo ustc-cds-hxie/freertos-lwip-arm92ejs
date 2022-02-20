@@ -161,7 +161,7 @@ static void vShellTask( void *pvParameters )
 void start_shell_task()
 {
        /* And finally create two tasks: */
-    if ( pdPASS != xTaskCreate(vShellTask, "shell", 128, (void*) &SHELL_CMDS, 1, NULL) )
+    if ( pdPASS != xTaskCreate(vShellTask, "console shell", 128, (void*) &SHELL_CMDS, 1, NULL) )
     {
         SANE_PLATFORM_ERROR(("Could not create task1\r\n"));
     }
