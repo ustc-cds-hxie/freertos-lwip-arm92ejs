@@ -274,10 +274,15 @@ static void vSimpleShellTask( void *pvParameters )
 
 void start_shell_task()
 {
-       /* And finally create two tasks: */
+
 #if USE_SIMPLE_SHELL
     if ( pdPASS != xTaskCreate(vSimpleShellTask, "console shell", 1024, (void*) &SHELL_CMDS, 1, NULL) )
 #else
+    /*
+     * the stack size should be big enough, as some tasks (e.g., ifconfig, sys_stats) need 
+     * large buffers. If the stack size if too small, memory will be corrupted due to stack
+     * overflow
+     */
     if ( pdPASS != xTaskCreate(vShellTask, "console shell", 1024, (void*) &SHELL_CMDS, 1, NULL) )
 #endif
     {
