@@ -72,7 +72,7 @@ static uint16_t bufPos = 0;
 static uint8_t recvUartNr = ( uint8_t ) -1;
 
 /* A queue for received characters, not processed yet */
-static QueueHandle_t recvQueue;
+QueueHandle_t recvQueue;
 
 
 /* forward declaration of an ISR handler: */
@@ -163,6 +163,7 @@ char getChar()
    char ch;
    /* The task is blocked until something appears in the queue */
    xQueueReceive(recvQueue, (void*) &ch, portMAX_DELAY);
+   //xQueueReceive(recvQueue, (void*) &ch, 1000);
    return ch;
 }
 

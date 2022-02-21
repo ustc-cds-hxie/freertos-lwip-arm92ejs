@@ -36,6 +36,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "debug.h"
+#include "print.h"
 #include "printf.h"
 
 #include "history.h"
@@ -44,6 +45,7 @@
 #include "shell.h"
 #include "command.h"
 
+#include "receive.h"
 
 ReadlineData readlineData = READLINE_DATA(256);
 HistoryData historyData = HISTORY_DATA(10);
@@ -98,9 +100,17 @@ static int parseArgs(char* line, char* argv[SHELL_MAX_ARGS])
    return argc;
 }
 
-inline HistoryData *getHistoryData() { return &historyData; }
+inline HistoryData *getHistoryData() 
+{ 
+   return &historyData;
+   //return NULL; 
+}
 
-inline ReadlineData *getReadlineData() { return &readlineData; }
+inline ReadlineData *getReadlineData() 
+{ 
+   return &readlineData; 
+   //return NULL;
+}
 
 /* 
 ** Shell
@@ -114,6 +124,7 @@ static void vShellTask( void *pvParameters )
         /* Print out the name of this task. */
 
         char* line = readline(SHELL_PROMPT);
+
         char* argv[SHELL_MAX_ARGS];
         
         int argc, i;
@@ -140,7 +151,6 @@ static void vShellTask( void *pvParameters )
               printf_("command not found: %s\n", argv[0]);
            }
          }
-         rl_free(line);
 
         vTaskDelay( 100 / portTICK_RATE_MS );
     }
@@ -158,10 +168,118 @@ static void vShellTask( void *pvParameters )
     vTaskDelete(NULL);
 }
 
+#define USE_SIMPLE_SHELL 0
+
+#if USE_SIMPLE_SHELL
+
+/*******************************
+ * a simple shell
+ *******************************/
+
+/* This code is received when BackSpace is pressed: */
+#define CODE_BS             ( 0x7F )
+/* Enter (CR): */
+#define CODE_CR             ( 0x0D )
+
+#define CMDBUF_SIZE 256
+static char cmdbuf[CMDBUF_SIZE];
+
+static char *simple_readline(char *prompt)
+{
+   portCHAR ch;
+   int pos = 0;
+
+   if (prompt != NULL)
+      vDirectPrintMsg(prompt);
+
+   for ( ; ; )
+   {
+      /* The task is blocked until something appears in the queue */
+      //xQueueReceive(recvQueue, (void*) &ch, portMAX_DELAY);
+      ch = getChar();
+      
+      vPrintChar(ch);
+
+      if (ch == CODE_BS)
+      {
+         pos -= 1;
+         if (pos < 0) pos = 0;
+      }
+      else if (ch == CODE_CR)
+      {
+         cmdbuf[pos++] = 0;
+         return cmdbuf;
+      }
+      else
+      {
+         cmdbuf[pos++] = ch;
+         // always reserve the last char position for '\0'
+         if (pos > CMDBUF_SIZE - 1) 
+            pos = CMDBUF_SIZE - 1;
+      }
+   }
+}
+
+static void vSimpleShellTask( void *pvParameters )
+{
+    ShellCmd* cmd = (ShellCmd *) pvParameters;
+
+    for( ; ; )
+    {
+
+        char* line = simple_readline(SHELL_PROMPT);
+
+        char* argv[SHELL_MAX_ARGS];
+        
+        int argc, i;
+        // if (line == NULL) break;
+        
+        if (line != NULL && line[0] != '\0')
+        {         
+
+           argc = parseArgs(line, argv);
+           
+           for (i = 0; cmd[i].name != NULL; i++)
+           {
+              if (strcmp(cmd[i].name, argv[0]) == 0) 
+              {
+                 //add_history(line);
+                 cmd[i].fx(argc, argv);
+                 break;
+              }
+           }
+           
+           if (cmd[i].name == NULL)
+           {
+              printf_("command not found: %s\n", argv[0]);
+           }
+         }
+
+        vTaskDelay( 100 / portTICK_RATE_MS );
+    }
+
+    /*
+     * we should never reach here
+     */
+    SANE_PLATFORM_ERROR(("Shell exited. System still runs but there is no shell.\n"));
+
+    /*
+     * If the task implementation ever manages to break out of the
+     * infinite loop above, it must be deleted before reaching the
+     * end of the function!
+     */
+    vTaskDelete(NULL);
+}
+#endif
+
 void start_shell_task()
 {
        /* And finally create two tasks: */
-    if ( pdPASS != xTaskCreate(vShellTask, "console shell", 128, (void*) &SHELL_CMDS, 1, NULL) )
+#if USE_SIMPLE_SHELL
+    if ( pdPASS != xTaskCreate(vSimpleShellTask, "console shell", 1024, (void*) &SHELL_CMDS, 1, NULL) )
+#else
+    if ( pdPASS != xTaskCreate(vShellTask, "console shell", 1024, (void*) &SHELL_CMDS, 1, NULL) )
+#endif
     {
         SANE_PLATFORM_ERROR(("Could not create task1\r\n"));
     }

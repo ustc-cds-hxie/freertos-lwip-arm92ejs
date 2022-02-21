@@ -32,12 +32,24 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
+#include "lwip/stats.h"
+#include "print.h"
 #include "printf.h"
 #include "command.h"
+#include "debug.h"
 
-#define MAX_COMMAND_BUF_SIZE 1024
+#include "ifconfig.h"
+
+
+
+#define MAX_COMMAND_BUF_SIZE (5*1024)
 
 static char buf[MAX_COMMAND_BUF_SIZE];
+
+void vTaskTest(void *pvParameters);
+void cmdCmdTest(int argc, char* argv[]);
+void ramDiskTestTask(void *pvParameters);
+void cmdRamDiskTest(int argc, char* argv[]);
 
 /****************************************************************************
  *
@@ -55,9 +67,76 @@ const ShellCmd SHELL_CMDS[] =
 #endif
    {"ps", "Display threads information", cmdPs},
    {"top", "Display threads runtime information", cmdTop},
+   {"ifconfig", "show network interface information, and config interface", cmdIfconfig},
+   {"stat", "show usage information of memory heap, memory pool, and system sem/mutex/mbox", cmdStat},
+   {"cmdtest", "run batch of common commands", cmdCmdTest},
+   {"ramdisktest", "run batch of RAM disk test", cmdRamDiskTest},
    {"help", "display help message", cmdHelp},
    {NULL, NULL}
 };
+
+void vTaskCmdTest(void *pvParameters){
+
+    char buf[1024];
+
+    int i;
+    int maxtests = 20;
+
+    for (i=0; i< maxtests; i++){
+        int k = xTaskGetTickCount() % 4;
+
+        printf_("---------------------------------\n");
+        printf_("i = %d, k = %d\n", i, k);
+        printf_("---------------------------------\n");
+
+        switch(k){
+            case 0:
+                // ps
+                vTaskList(buf);
+                printf_("Thread Name\tState\tPrio\tRStack\tThreadID\n");
+                printf_("------------------------------------------------\n");
+                printf_(buf);
+                break;
+            case 1:
+                // top
+                vTaskGetRunTimeStats(buf);
+                printf_("Thread Name\tRuntime\t\t%%CPU\n");
+                printf_("------------------------------------\n");
+                printf_("%s", buf);
+                break;
+            case 2:
+                // ifconfig
+                stats_display();
+                break;
+            case 3:
+                // ifconfig
+                cmdIfconfig(0, NULL);
+                break;
+        }
+        vTaskDelay( 10 / portTICK_RATE_MS );
+    }
+
+    printf_("\nvTaskTest ends.\n");
+
+    vTaskDelete(NULL);
+
+    /* suppress a warning since 'params' is ignored */
+    (void) pvParameters;
+}
+
+void cmdCmdTest(int argc, char* argv[]){
+    if ( pdPASS != xTaskCreate(vTaskCmdTest, "CmdTest", 1024, NULL, 2, NULL) )
+    {
+        SANE_PLATFORM_ERROR(("Could not create CmdTest task\r\n"));
+    }
+}
+
+void cmdRamDiskTest(int argc, char* argv[]){
+    if ( pdPASS != xTaskCreate(ramDiskTestTask, "DiskTest", 1024, NULL, 2, NULL) )
+    {
+        SANE_PLATFORM_ERROR(("Could not create DiskTest task\r\n"));
+    }
+}
 
 /*
  * the following three FreeRTOS macros need to be defined in order to call vTaskList()
@@ -88,18 +167,20 @@ void cmdTop(int argc, char* argv[])
     vTaskGetRunTimeStats(buf); 
     printf_("Thread Name\tRuntime\t\t%%CPU\n");
     printf_("------------------------------------\n");
-    printf_(buf);
+    printf_("%s", buf);
 }
 
 void cmdHelp(int argc, char *argv[])
 {
-   printf_("Command\t\tUsage\n");
-   printf_("----------------------------------------------\n");
+   printf_("-----------------------------------------------------------------------------------\n");
+   printf_("%16s\tUsage\n", "Command");
+   printf_("-----------------------------------------------------------------------------------\n");
    for (int i = 0; SHELL_CMDS[i].name != NULL; i++)
    {
-      printf("%s\t%s\n", SHELL_CMDS[i].name, SHELL_CMDS[i].helpmsg);
+      printf_("%16s\t%s\n", SHELL_CMDS[i].name, SHELL_CMDS[i].helpmsg);
    }
 }
+
 #if 0
 void cmdPing(int argc, char *argv[])
 {

@@ -121,7 +121,7 @@ DRIVERS_OBJS = timer.o pic.o sic.o uart.o bsp.o ethernetif.o lan91c.o console.o
 
 APP_OBJS = demotasks.o disktest.o
 
-SHELL_OBJS = shell.o command.o
+SHELL_OBJS = shell.o command.o ifconfig.o
 
 # nostdlib.o must be commented out if standard lib is going to be linked!
 #LIB_OBJS = nostdlib.o

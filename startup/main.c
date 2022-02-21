@@ -52,6 +52,7 @@
 #include "ethernetif.h"
 #include "console.h"
 #include "debug.h"
+#include "shell.h"
 
 volatile unsigned int g_cpu_runtime;
 

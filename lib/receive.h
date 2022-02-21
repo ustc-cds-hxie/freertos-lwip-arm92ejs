@@ -32,6 +32,10 @@
 #define _RECEIVE_H_
 
 #include <FreeRTOS.h>
+#include <queue.h>
+#include <task.h>
+
+extern QueueHandle_t recvQueue;
 
 int16_t recvInit(uint8_t uart_nr);
 

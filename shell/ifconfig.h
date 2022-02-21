@@ -30,18 +30,10 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ****************************************************************************/
 
-#ifndef _COMMAND_H_
-#define _COMMAND_H_
+ #ifndef _IFCONFIG_H_
+ #define _IFCONFIG_H_
 
-#include "shell.h"
+void cmdStat(int argc, char *argv[]);
+void cmdIfconfig(int argc, char *argv[]);
 
-#include "ifconfig.h"
-
-extern const ShellCmd SHELL_CMDS[];
-
-void cmdPs(int argc, char* argv[]);
-void cmdTop(int argc, char* argv[]);
-void cmdPing(int argc, char* argv[]);
-void cmdHelp(int argc, char* argv[]);
-
-#endif
+ #endif
