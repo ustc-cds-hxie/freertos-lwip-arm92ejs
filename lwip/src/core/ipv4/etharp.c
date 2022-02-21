@@ -76,32 +76,12 @@
  */
 #define ARP_MAXPENDING 5
 
-/** ARP states */
-enum etharp_state {
-  ETHARP_STATE_EMPTY = 0,
-  ETHARP_STATE_PENDING,
-  ETHARP_STATE_STABLE,
-  ETHARP_STATE_STABLE_REREQUESTING_1,
-  ETHARP_STATE_STABLE_REREQUESTING_2
-#if ETHARP_SUPPORT_STATIC_ENTRIES
-  , ETHARP_STATE_STATIC
-#endif /* ETHARP_SUPPORT_STATIC_ENTRIES */
-};
-
-struct etharp_entry {
-#if ARP_QUEUEING
-  /** Pointer to queue of pending outgoing packets on this ARP entry. */
-  struct etharp_q_entry *q;
-#else /* ARP_QUEUEING */
-  /** Pointer to a single pending outgoing packet on this ARP entry. */
-  struct pbuf *q;
-#endif /* ARP_QUEUEING */
-  ip4_addr_t ipaddr;
-  struct netif *netif;
-  struct eth_addr ethaddr;
-  u16_t ctime;
-  u8_t state;
-};
+/*------------------------------------------------------------------------
+ *
+ * move "enum etharp_state", "struct etharp_entry" to etharp.c
+ * 
+ * -----------------------------------------------------------------------
+ */
 
 static struct etharp_entry arp_table[ARP_TABLE_SIZE];
 
@@ -130,6 +110,14 @@ static netif_addr_idx_t etharp_cached_entry;
 #error "ARP_TABLE_SIZE must fit in an s16_t, you have to reduce it in your lwipopts.h"
 #endif
 
+/*
+ * Haiyong Xie @ 2022
+ * expose arp_table to network config utilities
+ */
+struct etharp_entry *get_arp_table(void)
+{
+  return (struct etharp_entry *) arp_table;
+}
 
 static err_t etharp_request_dst(struct netif *netif, const ip4_addr_t *ipaddr, const struct eth_addr *hw_dst_addr);
 static err_t etharp_raw(struct netif *netif,
