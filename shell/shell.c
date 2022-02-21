@@ -160,8 +160,12 @@ static void vShellTask( void *pvParameters )
 
 void start_shell_task()
 {
-       /* And finally create two tasks: */
-    if ( pdPASS != xTaskCreate(vShellTask, "console shell", 128, (void*) &SHELL_CMDS, 1, NULL) )
+    /*
+     * the stack size should be big enough, as some tasks (e.g., ifconfig, sys_stats) need 
+     * large buffers. If the stack size if too small, memory will be corrupted due to stack
+     * overflow
+     */
+    if ( pdPASS != xTaskCreate(vShellTask, "console shell", 1024, (void*) &SHELL_CMDS, 1, NULL) )
     {
         SANE_PLATFORM_ERROR(("Could not create task1\r\n"));
     }
