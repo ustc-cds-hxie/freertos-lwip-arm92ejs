@@ -30,15 +30,17 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  ****************************************************************************/
 
-// NETIF_FOREACH
 #include "lwip/netif.h"
 #include "lwip/inet.h"
 #include "lwip/mem.h"
 #include "netif/etharp.h"
 
+#include "printf.h"
+
 extern struct etharp_entry *get_arp_table();
 
-void cmdArp(int argc, char *argv[]){
+static void cmdArp_show(void)
+{
     printf_("%3s\t%15s\t%20s\t%8s\t%6s\t%5s\n", "No.", "IP Addr", "MAC Addr", "State", "Time", "Intf");
     printf_("---------------------------------------------------------------------------------\n");
     struct etharp_entry *ee;
@@ -67,5 +69,29 @@ void cmdArp(int argc, char *argv[]){
 
         printf_("\t%8d\t%6d\t%c%c\n", 
             ee->state, ee->ctime, ee->netif->name[0], ee->netif->name[1] );
+    }
+}
+
+#define ETHARP_FLAG_FIND_ONLY    2
+
+void cmdArp(int argc, char *argv[]){
+    if (argc == 1) {
+        cmdArp_show();
+        return;
+    }
+    if (strcmp(argv[1], "-d")== 0 && argc >= 3){
+#if 0
+        // delete an entry
+        ip_addr_t target;
+        target.addr = inet_addr(argv[1]);
+        int i = etharp_find_entry(&target, ETHARP_FLAG_FIND_ONLY, netif_default);
+        if (i != ERR_MEM) 
+            etharp_free_entry(i);
+#endif
+    }else if (strcmp(argv[1], "-i") == 0) {
+        // add an entry
+        // To do: call etharp_update_arp_entry(struct netif *netif, const ip4_addr_t *ipaddr, struct eth_addr *ethaddr, u8_t flags)
+        printf_("cmdArp: arp -i is to be implemented.\n");
+        return;
     }
 }
