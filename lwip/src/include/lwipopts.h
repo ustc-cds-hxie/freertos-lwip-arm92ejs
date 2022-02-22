@@ -455,7 +455,16 @@
  * LWIP_SOCKET==1: Enable Socket API (require to use sockets.c)
  */
 #define LWIP_SOCKET                     1
-
+/**
+ * LWIP_SO_SNDTIMEO==1: Enable send timeout for sockets/netconns and
+ * SO_SNDTIMEO processing.
+ */
+#define LWIP_SO_SNDTIMEO                1
+/**
+ * LWIP_SO_RCVTIMEO==1: Enable receive timeout for sockets/netconns and
+ * SO_RCVTIMEO processing.
+ */
+#define LWIP_SO_RCVTIMEO                1
 /**
  * SO_REUSE==1: Enable SO_REUSEADDR
  */
@@ -628,6 +637,7 @@
 #define IP_DEBUG                   MY_DEBUG_CODE
 #define LWIP_DBG_MIN_LEVEL         LWIP_DBG_LEVEL_ALL
 
+#define SOCKETS_DEBUG              MY_DEBUG_CODE
 #define UDP_DEBUG                  MY_DEBUG_CODE
 #define TCP_DEBUG                  MY_DEBUG_CODE
 #define PBUF_DEBUG                 MY_DEBUG_CODE
@@ -706,10 +716,13 @@
  */
 #define TCPIP_THREAD_NAME              "TCP/IP"
 #define TCPIP_THREAD_STACKSIZE          1000
-#define TCPIP_MBOX_SIZE                 5
-#define DEFAULT_UDP_RECVMBOX_SIZE       2000
+
+#define TCPIP_MBOX_SIZE                 128
+#define DEFAULT_RAW_RECVMBOX_SIZE       1024
 #define DEFAULT_TCP_RECVMBOX_SIZE       2000
+#define DEFAULT_UDP_RECVMBOX_SIZE       2000
 #define DEFAULT_ACCEPTMBOX_SIZE         2000
+
 #define DEFAULT_THREAD_STACKSIZE        500
 #define TCPIP_THREAD_PRIO               (configMAX_PRIORITIES - 2)
 #define LWIP_COMPAT_MUTEX               1

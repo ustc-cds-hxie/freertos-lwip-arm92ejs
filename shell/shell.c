@@ -283,7 +283,7 @@ void start_shell_task()
      * large buffers. If the stack size if too small, memory will be corrupted due to stack
      * overflow
      */
-    if ( pdPASS != xTaskCreate(vShellTask, "console shell", 1024, (void*) &SHELL_CMDS, 1, NULL) )
+    if ( pdPASS != xTaskCreate(vShellTask, "console shell", 4096, (void*) &SHELL_CMDS, 1, NULL) )
 #endif
     {
         SANE_PLATFORM_ERROR(("Could not create task1\r\n"));

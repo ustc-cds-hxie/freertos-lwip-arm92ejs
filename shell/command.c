@@ -33,13 +33,14 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "lwip/stats.h"
+#include "lwip/inet.h"
 #include "print.h"
 #include "printf.h"
 #include "command.h"
 #include "debug.h"
 
 #include "ifconfig.h"
-
+#include "ping.h"
 
 
 #define MAX_COMMAND_BUF_SIZE (5*1024)
@@ -68,6 +69,7 @@ const ShellCmd SHELL_CMDS[] =
    {"ps", "Display threads information", cmdPs},
    {"top", "Display threads runtime information", cmdTop},
    {"ifconfig", "show network interface information, and config interface", cmdIfconfig},
+   {"ping", "ping <IP>", cmdPing},
    {"arp", "show arp table", cmdArp},
    {"stat", "show usage information of memory heap, memory pool, and system sem/mutex/mbox", cmdStat},
    {"cmdtest", "run batch of common commands", cmdCmdTest},
@@ -171,18 +173,6 @@ void cmdTop(int argc, char* argv[])
     printf_("%s", buf);
 }
 
-void cmdHelp(int argc, char *argv[])
-{
-   printf_("-----------------------------------------------------------------------------------\n");
-   printf_("%16s\tUsage\n", "Command");
-   printf_("-----------------------------------------------------------------------------------\n");
-   for (int i = 0; SHELL_CMDS[i].name != NULL; i++)
-   {
-      printf_("%16s\t%s\n", SHELL_CMDS[i].name, SHELL_CMDS[i].helpmsg);
-   }
-}
-
-#if 0
 void cmdPing(int argc, char *argv[])
 {
    if (argc != 2) {
@@ -194,4 +184,15 @@ void cmdPing(int argc, char *argv[])
    target.addr = inet_addr(argv[1]);
    ping_thread((void *)&target);
 }
-#endif
+
+void cmdHelp(int argc, char *argv[])
+{
+   printf_("-----------------------------------------------------------------------------------\n");
+   printf_("%16s\tUsage\n", "Command");
+   printf_("-----------------------------------------------------------------------------------\n");
+   for (int i = 0; SHELL_CMDS[i].name != NULL; i++)
+   {
+      printf_("%16s\t%s\n", SHELL_CMDS[i].name, SHELL_CMDS[i].helpmsg);
+   }
+}
+

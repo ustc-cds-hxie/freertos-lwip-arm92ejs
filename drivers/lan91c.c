@@ -407,7 +407,7 @@ static err_t _lan91cInit(struct netif* netif)
    netif->name[0] = 'l';
    netif->name[1] = 'n';
 
-   netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_UP;
+   netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_UP | NETIF_FLAG_LINK_UP;
 
    /* We directly use etharp_output() here to save a function call.
     * You can instead declare your own function an call etharp_output()
