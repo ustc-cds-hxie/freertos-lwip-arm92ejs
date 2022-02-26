@@ -39,6 +39,7 @@
 
  #include "timer.h"
  #include "uart.h"
+ #include "lan91c.h"
 
  void _init(void)
  {
@@ -72,4 +73,7 @@
      {
          uart_init(i);
      }
+
+     /* set up eth base addr. lan91c */
+     setup_lan91c_base_address();
 }

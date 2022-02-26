@@ -82,7 +82,8 @@
 
 #define SANE_DBG_CONSOLE       0x0100U
 #define SANE_DBG_IRQ           0x0200U
-#define SAME_DBG_ETH_RECV      0x0400U
+#define SANE_DBG_ETH_RECV      0x0400U
+#define SANE_DBG_ARP_FILTER    0x0800U
 
 /* Plaform specific diagnostic output */
 #define SANE_PLATFORM_DIAG(x)   do {                \

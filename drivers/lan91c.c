@@ -44,7 +44,8 @@
 #include "lwip/inet.h"
 #include "netif/etharp.h"
 #include "lwip/dhcp.h"
-
+#include "lwip/arch.h"
+#include "lwip/etharp.h"
 
 #include "printf.h"
 #include "ethernetif.h"
@@ -54,15 +55,30 @@
 
 #include "debug.h"
 
-extern struct netif xnetif;
-
 #ifdef LAN91C_IRQ_USE_SYS_MBOX
 sys_mbox_t lan91cmbox;
 #else
 QueueHandle_t lan91cqueue;
 #endif
 
-LAN91C lan91c = LAN91C_CREATE(LAN91C111_BASE_ADDR);
+LAN91C gLan91c;
+
+void setup_lan91c_base_address()
+{
+   LAN91C* lan91c = &gLan91c;
+   lan91c->base = LAN91C111_BASE_ADDR;
+
+   /*
+    * get PHY hwaddr
+    */
+   SET_BSR(lan91c, 1);
+   lan91c->hwaddr[0] = B1_IARn(lan91c)[0];
+   lan91c->hwaddr[1] = B1_IARn(lan91c)[1];
+   lan91c->hwaddr[2] = B1_IARn(lan91c)[2];
+   lan91c->hwaddr[3] = B1_IARn(lan91c)[3];
+   lan91c->hwaddr[4] = B1_IARn(lan91c)[4];
+   lan91c->hwaddr[5] = B1_IARn(lan91c)[5];
+}
 
 #if 0
 /****************************************************************************
@@ -213,7 +229,7 @@ static void lan91cRx(void* state)
    }
 #endif
 
-   SANE_DEBUGF(SANE_DBG_IRQ, ("lan91cRX: entry, pkt = %d, mtu=%d\n", pkt, lan91c->netif->mtu));
+   SANE_DEBUGF(SANE_DBG_IRQ, ("lan91cRX: entry, pkt = %d, mtu=%d\n", pkt, lan91c->pcurnetif->mtu));
 
    B2_PNR(lan91c) = pkt;
    B2_PTR(lan91c) = 2;
@@ -251,7 +267,7 @@ static void lan91cRx(void* state)
    B2_MSK(lan91c) |= 0x01;
 
    SANE_DEBUGF(SANE_DBG_IRQ, ("\nlan91cRx: invoking netif->input(), length = %d payload = %d\n", length, payload));
-   if (lan91c->netif->input(pbuf, lan91c->netif) != ERR_OK){
+   if (lan91c->pcurnetif->input(pbuf, lan91c->pcurnetif) != ERR_OK){
       SANE_DEBUGF(SANE_DBG_IRQ, ("\nlan91cRx: netif->input() failed.\n"));
 
       pbuf_free(pbuf);
@@ -316,10 +332,10 @@ static void linkChange(void* state)
    netif_set_link_up(lan91c->netif);
 
 #ifdef LWIP_DHCP
-   if ((lan91c->netif->ip_addr.addr == 0) &&
-       ((lan91c->netif->flags & NETIF_FLAG_UP) != 0))
+   if ((lan91c->pcurnetif->ip_addr.addr == 0) &&
+       ((lan91c->pcurnetif->flags & NETIF_FLAG_UP) != 0))
    {
-      dhcp_start(lan91c->netif);
+      dhcp_start(lan91c->pcurnetif);
    }
 #endif
 
@@ -328,13 +344,39 @@ static void linkChange(void* state)
 /****************************************************************************
  *
  ****************************************************************************/
+
+static int lan91c_initialized = 0;
+
 static err_t _lan91cInit_low_level_init(struct netif* netif)
 {
-   LAN91C* lan91c = netif->state;
 
+   /*
+    * set up packet recv queue
+    */
+
+   LAN91C* lan91c = &gLan91c;
+
+   lan91c->linkChangeMsg = tcpip_callbackmsg_new(linkChange, lan91c);
+   lan91c->ethRxMsg = tcpip_callbackmsg_new(lan91cRx, lan91c);
+
+#ifdef LAN91C_IRQ_USE_SYS_MBOX
+   if ( ERR_OK != sys_mbox_new(&lan91cmbox, 10)){
+      SANE_DEBUGF(SANE_DBG_IRQ, ("Error: sys_mbox_new failed\n"));
+      return;
+   }
+   lan91c->rxPacket = &lan91cmbox;
+#else
+   lan91cqueue = xQueueCreate(10, sizeof(uint8_t *));
+   lan91c->rxPacket = lan91cqueue;
+#endif
+
+   /*
+    * initialize hardware PHY
+    */
    SET_BSR(lan91c, 2);
    B2_MMUCR(lan91c) = 2 << 5; /* reset MMU */
    while (B2_MMUCR(lan91c) & 0x0001);
+
 
    SET_BSR(lan91c, 1);
    B1_CTR(lan91c) |= 0x0800; /* auto-release */
@@ -365,23 +407,48 @@ static err_t _lan91cInit_low_level_init(struct netif* netif)
    return ERR_OK;
 }
 
-static err_t _lan91cInit(struct netif* netif)
+int lwip_network_init_lan91cInit(struct netif *netif)
 {
+
+   /* Since we are using the tcp/ip thread for input, we can just use the real
+    * input function.
+    */
 #if LWIP_NETIF_HOSTNAME
    /* Initialize interface hostname */
    netif->hostname = MY_HOSTNAME;
 #endif /* LWIP_NETIF_HOSTNAME */
 
+   netif->mtu = 1500;
+
    netif->hwaddr_len = ETHARP_HWADDR_LEN;
 
+   /*
+    * Initialize the snmp variables and counters inside the struct netif.
+    * The last argument should be replaced with your link speed, in units
+    * of bits per second.
+    */
+   // NETIF_INIT_SNMP(netif, snmp_ifType_ethernet_csmacd, LINK_SPEED_OF_NETIF_IN_BPS); */
+
+   netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_UP | NETIF_FLAG_LINK_UP;
+
+   /* We directly use etharp_output() here to save a function call.
+    * You can instead declare your own function an call etharp_output()
+    * from it if you have to do some checks before sending (e.g. if link
+    * is available...) */
+   netif->output = etharp_output;
+   netif->linkoutput = lan91cTx;
+
+#define USE_REAL_HW_ADDR
+
 #ifdef USE_REAL_HW_ADDR
-   SET_BSR(lan91c, 1);
-   netif->hwaddr[0] = B1_IARn(lan91c)[0];
-   netif->hwaddr[1] = B1_IARn(lan91c)[1];
-   netif->hwaddr[2] = B1_IARn(lan91c)[2];
-   netif->hwaddr[3] = B1_IARn(lan91c)[3];
-   netif->hwaddr[4] = B1_IARn(lan91c)[4];
-   netif->hwaddr[5] = B1_IARn(lan91c)[5];
+   LAN91C *lan91c = &gLan91c;
+
+   netif->hwaddr[0] = lan91c->hwaddr[0];
+   netif->hwaddr[1] = lan91c->hwaddr[1];
+   netif->hwaddr[2] = lan91c->hwaddr[2];
+   netif->hwaddr[3] = lan91c->hwaddr[3];
+   netif->hwaddr[4] = lan91c->hwaddr[4];
+   netif->hwaddr[5] = lan91c->hwaddr[5];
 #else
    /* set netif MAC hardware address */
    netif->hwaddr[0] =  MAC_ADDR0;
@@ -393,69 +460,14 @@ static err_t _lan91cInit(struct netif* netif)
 #endif
 
    /*
-    * Initialize the snmp variables and counters inside the struct netif.
-    * The last argument should be replaced with your link speed, in units
-    * of bits per second.
+    * make sure lan91c only initialize once 
     */
-   // NETIF_INIT_SNMP(netif, snmp_ifType_ethernet_csmacd, LINK_SPEED_OF_NETIF_IN_BPS); */
-
-   netif->name[0] = IFNAME0;
-   netif->name[1] = IFNAME1;
-
-   netif->mtu = 1500;
-
-   netif->name[0] = 'l';
-   netif->name[1] = 'n';
-
-   netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_UP | NETIF_FLAG_LINK_UP;
-
-   /* We directly use etharp_output() here to save a function call.
-    * You can instead declare your own function an call etharp_output()
-    * from it if you have to do some checks before sending (e.g. if link
-    * is available...) */
-   netif->output = etharp_output;
-   netif->linkoutput = lan91cTx;
-
-   /* initialize the hardware */
-   _lan91cInit_low_level_init(netif);
+   if (0 == lan91c_initialized)
+   {
+      lan91c_initialized = 1;
+      /* initialize the hardware */
+      _lan91cInit_low_level_init(netif);
+   }
 
    return ERR_OK;
-}
-/****************************************************************************
- *
- ****************************************************************************/
-void lwip_network_init_lan91cInit(LAN91C* lan91c, ip_addr_t* _ip, ip_addr_t* _netmask,
-                ip_addr_t* _gateway, bool setDefault)
-{
-
-
-   lan91c->netif = &xnetif;
-   
-   lan91c->linkChangeMsg = tcpip_callbackmsg_new(linkChange, lan91c);
-   lan91c->ethRxMsg = tcpip_callbackmsg_new(lan91cRx, lan91c);
-
-#ifdef LAN91C_IRQ_USE_SYS_MBOX
-   if ( ERR_OK != sys_mbox_new(&lan91cmbox, 10)){
-      SANE_DEBUGF(SANE_DBG_IRQ, ("Error: sys_mbox_new failed\n"));
-      return;
-   }
-   lan91c->rxPacket = &lan91cmbox;
-#else
-   lan91cqueue = xQueueCreate(10, sizeof(uint8_t *));
-   lan91c->rxPacket = lan91cqueue;
-#endif
-
-   /* Since we are using the tcp/ip thread for input, we can just use the real
-    * input function.
-    */
-   netif_add(lan91c->netif, _ip, _netmask, _gateway, lan91c, _lan91cInit, tcpip_input);
-
-
-   if (setDefault)
-      netif_set_default(lan91c->netif);
-   
-#if LWIP_NETIF_LINK_CALLBACK
-   /* Set the link callback function, this function is called on change of link status*/
-   netif_set_link_callback(&nxetif, lan91c->linkChangeMsg);
-#endif
 }

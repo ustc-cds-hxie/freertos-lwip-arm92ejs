@@ -70,7 +70,7 @@ const ShellCmd SHELL_CMDS[] =
    {"top", "Display threads runtime information", cmdTop},
    {"ifconfig", "show network interface information, and config interface", cmdIfconfig},
    {"ping", "ping <IP>", cmdPing},
-   {"arp", "show/update arp table: \narp\narp -d [IP]\narp -i IP MAC Intf", cmdArp},
+   {"arp", "show/update arp table: arp, arp -d [IP], arp -i IP MAC Intf", cmdArp},
    {"stat", "show usage information of memory heap, memory pool, and system sem/mutex/mbox", cmdStat},
    {"cmdtest", "run batch of common commands", cmdCmdTest},
    {"ramdisktest", "run batch of RAM disk test", cmdRamDiskTest},

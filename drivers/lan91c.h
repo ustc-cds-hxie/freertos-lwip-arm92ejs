@@ -42,6 +42,7 @@
 #include "lwip/netif.h"
 #include "lwip/tcpip.h"
 #include "arch/sys_arch.h"
+#include "lwip/etharp.h"
 
 /****************************************************************************
  * SMSC LAN91C111
@@ -92,13 +93,16 @@ extern sys_mbox_t lan91cmbox;
 extern QueueHandle_t lan91cqueue;
 #endif
 
+#define LAN91C_MAX_NETIF 5
+
 #define LAN91C_CREATE(base)            \
 {                                      \
    base,                               \
    NULL,                               \
+   {NULL, NULL, NULL, NULL, NULL},     \
    NULL,                               \
    NULL,                               \
-   NULL                               \
+   NULL                                \
 }
 
 /****************************************************************************
@@ -107,7 +111,10 @@ extern QueueHandle_t lan91cqueue;
 typedef struct
 {
    unsigned long base;
-   struct netif* netif;
+   struct netif* pcurnetif;
+   struct netif netif[LAN91C_MAX_NETIF];
+   char hwaddr[ETHARP_HWADDR_LEN];
+
    struct tcpip_callback_msg* linkChangeMsg;
    struct tcpip_callback_msg* ethRxMsg;
 #ifdef LAN91C_IRQ_USE_SYS_MBOX
@@ -117,7 +124,9 @@ typedef struct
 #endif
 } LAN91C;
 
-extern LAN91C lan91c;
+extern LAN91C gLan91c;
+
+void setup_lan91c_base_address();
 
 /****************************************************************************
  *
@@ -127,6 +136,6 @@ void lan91cIRQ(unsigned int n, void* lan91c);
 /****************************************************************************
  *
  ****************************************************************************/
-void lwip_network_init_lan91cInit(LAN91C* lan91c, ip_addr_t* _ip, ip_addr_t* _netmask, ip_addr_t* _gateway, bool setDefault);
+int lwip_network_init_lan91cInit(struct netif *netif);
 
 #endif

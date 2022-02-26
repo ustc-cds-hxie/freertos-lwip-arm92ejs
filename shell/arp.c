@@ -74,24 +74,54 @@ static void cmdArp_show(void)
 
 #define ETHARP_FLAG_FIND_ONLY    2
 
+uint8_t str_to_hex(char *str)
+{
+    uint8_t res;
+    char c;
+    c = str[0];
+    res = (c - '0' < 10) ? (c - '0') : ( (c - 'A' < 6) ? (c - 'A' + 10) : (c - 'a' + 10));
+    res = res * 10;
+
+    c = str[1];
+    res += (c - '0' < 10) ? (c - '0') : ( (c - 'A' < 6) ? (c - 'A' + 10) : (c - 'a' + 10));
+    return res;
+}
+
+void extract_eth_addr(char *str, struct eth_addr *ea)
+{
+    int i = 0;
+    char *token = strtok(str, ":");
+    while (token != NULL && i < ETH_HWADDR_LEN) {
+        ea->addr[i] = str_to_hex(token);
+        token = strtok(NULL, ":");
+        i += 1;
+    }
+}
 void cmdArp(int argc, char *argv[]){
     if (argc == 1) {
         cmdArp_show();
         return;
     }
     if (strcmp(argv[1], "-d")== 0 && argc >= 3){
-#if 0
         // delete an entry
         ip_addr_t target;
-        target.addr = inet_addr(argv[1]);
+        target.addr = inet_addr(argv[2]);
         int i = etharp_find_entry(&target, ETHARP_FLAG_FIND_ONLY, netif_default);
-        if (i != ERR_MEM) 
+        if (i != ERR_MEM) {
+            printf_("Deleting ARP entry for %s\n", inet_ntoa(target.addr));
             etharp_free_entry(i);
-#endif
+        }else{
+            printf_("Deleting ARP entry fails. Error code = %d\n", i);
+        }
     }else if (strcmp(argv[1], "-i") == 0) {
         // add an entry
         // To do: call etharp_update_arp_entry(struct netif *netif, const ip4_addr_t *ipaddr, struct eth_addr *ethaddr, u8_t flags)
-        printf_("cmdArp: arp -i is to be implemented.\n");
-        return;
+        ip_addr_t target;
+        target.addr = inet_addr(argv[2]);
+        struct eth_addr ea;
+        // parse mac addr
+        extract_eth_addr(argv[3], &ea);
+        printf_("ARP adding entry %s %s\n", inet_ntoa(target.addr), argv[3]);
+        etharp_update_arp_entry(netif_default, &target, &ea, 2);
     }
 }

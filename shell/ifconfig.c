@@ -298,6 +298,9 @@ static void _netif_list(struct netif *netif) {
     int i;
     char name[8];
     struct netdev *dev = netif->state;
+
+    memset(name, 0, sizeof(name));
+
     strncpy(name, netif->name, sizeof(netif->name));
     printf("Iface %s:\n", name);
     printf("\tIP %s ", inet_ntoa(netif->ip_addr));
@@ -313,10 +316,10 @@ static void _netif_list(struct netif *netif) {
         }
     }
     printf("\n");
-    printf("\tLink: %s State: %s",
-        netif_is_link_up(netif) ? "up" : "down",
-        netif_is_up(netif) ? "up" : "down");
-    printf("Link type: %s\n", "unknown");
+    printf("\tLink: %s\tState: %s\t",
+        netif_is_link_up(netif) ? "UP" : "DOWN",
+        netif_is_up(netif) ? "UP" : "DOWN");
+    printf("Link type: %s\n\n", "UNKNOWN");
 }
 
 #if LWIP_SINGLE_NETIF
@@ -331,7 +334,7 @@ int cmdIfconfig(int argc, char **argv)
 {
     if (argc < 2) {
         /* List in interface order, which is normally reverse of list order */
-        struct netif *netif = lan91c.netif;
+        struct netif *netif = &(gLan91c.netif[0]);
         int netifs = 0;
         int listed = 0;
         u8_t i;
@@ -349,9 +352,39 @@ int cmdIfconfig(int argc, char **argv)
         _netif_stat_proto();
 #endif
         return 0;
+
+    }else if (argc == 7 && strcmp(argv[3], "netmask") == 0 && strcmp(argv[5], "gw") == 0 ){
+      /*
+       * example:
+       *  ifconfig l0 10.0.2.10 netmask 255.255.255.0 gw 10.0.2.1 
+       */
+
+      struct netif *netif = &(gLan91c.netif[0]);
+      ip_addr_t ipaddr, netmask, gw;
+
+      ipaddr.addr = inet_addr(argv[2]);
+      netmask.addr = inet_addr(argv[4]);
+      gw.addr = inet_addr(argv[6]);
+
+      NETIF_FOREACH(netif) {
+        if (netif->name[0] == argv[1][0] && netif->name[1] == argv[1][1])
+        {
+          LOCK_TCPIP_CORE();
+    
+          netif_set_addr(netif, &ipaddr, &netmask, &gw);
+
+          UNLOCK_TCPIP_CORE();
+          return 0;
+        }
+      }
+      printf_("Error: cannot find interface %s\n", argv[1]);
+      return 1;
+
+    } else {
+      printf_("Usage: %s <intf> <IP> netmask <network mask> gw <gateway>\n", argv[0]);
+      return 1;
     }
-    printf("%s takes no arguments.\n", argv[0]);
-    return 1;
+
 }
 
 void cmdStat(int argc, char *argv[])

@@ -232,6 +232,8 @@ ping_recv(int s)
           PING_RESULT((ICMPH_TYPE(iecho) == ICMP_ER));
           //return;
         } else {
+          printf_("ping_recv: drop, len = %d, iecho->id = %d, PING_ID = %d, iecho->seqno = %d, ping_seq_num = %d\n", 
+              len, ntohs(iecho->id), PING_ID, ntohs(iecho->seqno), ping_seq_num);
           LWIP_DEBUGF( PING_DEBUG, ("ping: drop\n"));
         }
       }
@@ -240,7 +242,7 @@ ping_recv(int s)
     fromlen = sizeof(from);
   }
 
-  if (len == 0) {
+  if (len <= 0) {
     LWIP_DEBUGF( PING_DEBUG, ("ping: recv - %"U32_F" ms - timeout\n", (sys_now()-ping_time)));
     printf_("From %s icmp_seq=%d %"U32_F" ms - timeout Destination Host Unreachable\n","10.0.2.15", ping_seq_num, (sys_now()-ping_time));
   }

@@ -543,6 +543,13 @@
    ---------- VLAN options ----------
    ---------------------------------------
 */
+
+/* 
+ * multiple virtual network interface
+ */
+#define LWIP_ARP_FILTER_NETIF          1
+#define LWIP_ARP_FILTER_NETIF_FN       lwip_arp_filter_netif_fn
+
 /*
  * copied from lwip/opt.h for future revisions
  */

@@ -106,6 +106,12 @@ struct etharp_q_entry {
 };
 #endif /* ARP_QUEUEING */
 
+s16_t etharp_find_entry(const ip4_addr_t *ipaddr, u8_t flags, struct netif *netif);
+
+void etharp_free_entry(int i);
+
+err_t etharp_update_arp_entry(struct netif *netif, const ip4_addr_t *ipaddr, struct eth_addr *ethaddr, u8_t flags);
+
 #define etharp_init() /* Compatibility define, no init needed. */
 void etharp_tmr(void);
 ssize_t etharp_find_addr(struct netif *netif, const ip4_addr_t *ipaddr,

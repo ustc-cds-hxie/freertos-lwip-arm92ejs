@@ -56,7 +56,7 @@
 #define MAC_ADDR2   0x22
 #define MAC_ADDR3   0x33
 #define MAC_ADDR4   0x44
-#define MAC_ADDR5   0x55
+#define MAC_ADDR5   0x11
  
 /*Static IP ADDRESS*/
 #define IP_ADDR0   10

@@ -77,6 +77,13 @@ const struct eth_addr ethzero = {{0, 0, 0, 0, 0, 0}};
  * @see ETHARP_SUPPORT_VLAN
  * @see LWIP_HOOK_VLAN_CHECK
  */
+
+/*
+ * add lwip_arp_filter_netif_fn() to support multiple virtual network interfaces
+ * Haiyong Xie @ 20220220
+ */
+extern struct netif *lwip_arp_filter_netif_fn(struct pbuf *p, struct netif *netifIn, u16_t type);
+
 err_t
 ethernet_input(struct pbuf *p, struct netif *netif)
 {
@@ -141,6 +148,15 @@ ethernet_input(struct pbuf *p, struct netif *netif)
 
 #if LWIP_ARP_FILTER_NETIF
   netif = LWIP_ARP_FILTER_NETIF_FN(p, netif, lwip_htons(type));
+#if 1
+  /* multiple virtual network interfaces: 
+   * packet has no netif corresponding to it: free pbuf */
+  /* Haiyong Xie @ 20220220 */
+  if (NULL == netif)
+  {
+    goto free_and_return;
+  }
+#endif /* if 1 */
 #endif /* LWIP_ARP_FILTER_NETIF*/
 
   if (ethhdr->dest.addr[0] & 1) {

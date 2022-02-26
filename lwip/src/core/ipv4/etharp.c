@@ -153,8 +153,7 @@ free_etharp_q(struct etharp_q_entry *q)
 #endif /* ARP_QUEUEING */
 
 /** Clean up ARP table entries */
-static void
-etharp_free_entry(int i)
+void etharp_free_entry(int i)
 {
   /* remove from SNMP ARP index tree */
   mib2_remove_arp_entry(arp_table[i].netif, &arp_table[i].ipaddr);
@@ -241,8 +240,7 @@ etharp_tmr(void)
  * @return The ARP entry index that matched or is created, ERR_MEM if no
  * entry is found or could be recycled.
  */
-static s16_t
-etharp_find_entry(const ip4_addr_t *ipaddr, u8_t flags, struct netif *netif)
+s16_t etharp_find_entry(const ip4_addr_t *ipaddr, u8_t flags, struct netif *netif)
 {
   s16_t old_pending = ARP_TABLE_SIZE, old_stable = ARP_TABLE_SIZE;
   s16_t empty = ARP_TABLE_SIZE;
@@ -407,8 +405,7 @@ etharp_find_entry(const ip4_addr_t *ipaddr, u8_t flags, struct netif *netif)
  *
  * @see pbuf_free()
  */
-static err_t
-etharp_update_arp_entry(struct netif *netif, const ip4_addr_t *ipaddr, struct eth_addr *ethaddr, u8_t flags)
+err_t etharp_update_arp_entry(struct netif *netif, const ip4_addr_t *ipaddr, struct eth_addr *ethaddr, u8_t flags)
 {
   s16_t i;
   LWIP_ASSERT("netif->hwaddr_len == ETH_HWADDR_LEN", netif->hwaddr_len == ETH_HWADDR_LEN);

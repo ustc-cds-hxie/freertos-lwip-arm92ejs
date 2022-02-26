@@ -38,12 +38,68 @@
 #include "lwip/init.h"
 #include "lwip/etharp.h"
 #include "lwip/tcpip.h"
+#include "lwip/inet.h"
 
+#include "debug.h"
 #include "ethernetif.h"
 
 #include "lan91c.h"
+#include "sic.h"
 
-struct netif xnetif;
+struct netif *lwip_arp_filter_netif_fn(struct pbuf *p, struct netif *netifIn, u16_t type)
+{
+  struct netif *netif = NULL;
+  struct etharp_hdr *etharphdr = NULL;
+  struct ip_hdr *iphdr = NULL;
+  ip_addr_t src, dst;
+
+  SANE_DEBUGF(SANE_DBG_ARP_FILTER, ("lwip_arp_filter_netif_fn: entry, netifIn = %c%c, type = %04x\n", netifIn->name[0], netifIn->name[1], type));
+
+  switch (type)
+  {
+    /* ARP */
+    case 0x0806:
+        etharphdr = (struct etharp_hdr *) ((unsigned char *)p->payload + 14);
+        memcpy(&dst, &etharphdr->dipaddr, sizeof(ip4_addr_t));
+        memcpy(&src, &etharphdr->sipaddr, sizeof(ip_addr_t));
+
+        for (netif = netif_list; netif != NULL; netif = netif->next)
+        {
+          if (netif_is_up(netif) && ip4_addr_cmp(&dst, &(netif->ip_addr)))
+          {
+            SANE_DEBUGF(SANE_DBG_ARP_FILTER, ("lwip_arp_filter_netif_fn: case 0x0806, mactch netif = %c%c, dst = %s\n", netif->name[0], netif->name[1], inet_ntoa(netif->ip_addr)));
+            break;
+          }
+        }
+        break;
+
+      /* IP */
+    case 0x0800:
+        iphdr = (struct ip_hdr *)((unsigned char *) p->payload + 14);
+        ip_addr_copy_from_ip4(dst, iphdr->dest);
+        ip_addr_copy_from_ip4(src, iphdr->src);
+
+        for (netif = netif_list; netif != NULL; netif = netif->next)
+        {
+          if (netif_is_up(netif) && ip4_addr_cmp(&dst, &(netif->ip_addr)))
+          {
+            SANE_DEBUGF(SANE_DBG_ARP_FILTER, ("lwip_arp_filter_netif_fn: case 0x0800, mactch netif = %c%c, dst = %s\n", netif->name[0], netif->name[1], inet_ntoa(netif->ip_addr)));
+            break;
+          }
+        }
+        break;
+
+      /* default */
+    default:
+        netif = netif_list;
+        SANE_DEBUGF(SANE_DBG_ARP_FILTER, ("lwip_arp_filter_netif_fn: case default, mactch netif = %c%c (use 1st netif as default), dst = %s\n", netif->name[0], netif->name[1], inet_ntoa(netif->ip_addr)));
+        break;
+
+  } /* switch */
+
+  SANE_DEBUGF(SANE_DBG_ARP_FILTER, ("lwip_arp_filter_netif_fn: return, found netif = %c%c\n", netif->name[0], netif->name[1]));
+  return netif;
+}
 
 /**
   * @brief  Initializes the lwIP stack
@@ -52,7 +108,7 @@ struct netif xnetif;
   */
 void lwip_network_init(void)
 {
-    ip4_addr_t addr;
+    ip4_addr_t ipaddr;
     ip4_addr_t netmask;
     ip4_addr_t gw;
 
@@ -64,9 +120,9 @@ void lwip_network_init(void)
   netmask.addr = 0;
   gw.addr = 0;
 #else
-    IP4_ADDR(&addr, 10, 0, 2, 99);
+    IP4_ADDR(&ipaddr, 10, 0, 0, 10);
     IP4_ADDR(&netmask, 255, 255, 255, 0);
-    IP4_ADDR(&gw, 10, 0, 2, 1);
+    IP4_ADDR(&gw, 10, 0, 0, 1);
 #endif  
 
   /* - netif_add(struct netif *netif, struct ip_addr *ipaddr,
@@ -82,11 +138,59 @@ void lwip_network_init(void)
   The init function pointer must point to a initialization function for
   your ethernet netif interface. The following code illustrates it's use.*/
 
-  lwip_network_init_lan91cInit(&lan91c, &addr, &netmask, &gw, true);
+  /* Since we are using the tcp/ip thread for input, we can just use the real
+   * input function.
+   */
+
+  LAN91C* lan91c = &gLan91c;
+
+  lan91c->pcurnetif = &(lan91c->netif[0]);
+  lan91c->pcurnetif->name[0] = 'l';
+  lan91c->pcurnetif->name[1] = '0';
+
+  netif_add(lan91c->pcurnetif, &ipaddr, &netmask, &gw, lan91c, lwip_network_init_lan91cInit, tcpip_input);
+  netif_set_up(lan91c->pcurnetif);
+  netif_set_link_up(lan91c->pcurnetif);
+
+  netif_set_default(lan91c->pcurnetif);
+   
+#if LWIP_NETIF_LINK_CALLBACK
+  /* Set the link callback function, this function is called on change of link status*/
+  netif_set_link_callback(&nxetif, lan91c->linkChangeMsg);
+#endif
+
+
+  /* second virtual interface */
+  IP4_ADDR(&ipaddr, 10, 0, 1, 10);
+  IP4_ADDR(&netmask, 255, 255, 255, 0);
+  IP4_ADDR(&gw, 10, 0, 1, 1);
+
+  lan91c->pcurnetif = &(lan91c->netif[1]);
+  lan91c->pcurnetif->name[0] = 'l';
+  lan91c->pcurnetif->name[1] = '1';
+
+  netif_add(lan91c->pcurnetif, &ipaddr, &netmask, &gw, lan91c, lwip_network_init_lan91cInit, tcpip_input);
+  netif_set_up(lan91c->pcurnetif);
+  netif_set_link_up(lan91c->pcurnetif);
+
+  /* second virtual interface */
+  IP4_ADDR(&ipaddr, 10, 0, 2, 10);
+  IP4_ADDR(&netmask, 255, 255, 255, 0);
+  IP4_ADDR(&gw, 10, 0, 2, 1);
+
+  lan91c->pcurnetif = &(lan91c->netif[2]);
+  lan91c->pcurnetif->name[0] = 'l';
+  lan91c->pcurnetif->name[1] = '2';
+  
+  netif_add(lan91c->pcurnetif, &ipaddr, &netmask, &gw, lan91c, lwip_network_init_lan91cInit, tcpip_input);
+  netif_set_up(lan91c->pcurnetif);
+  netif_set_link_up(lan91c->pcurnetif);
+
 
 #ifdef USE_DHCP
   DHCP_state = DHCP_START;
 #endif
+
 }
 
 #ifdef USE_DHCP
@@ -114,6 +218,8 @@ void LwIP_DHCP_task(void * pvParameters)
   uint32_t IPaddress;
   uint8_t iptab[4] = {0};
   uint8_t iptxt[20];
+
+  struct netif *netif = (struct netif *) pvParameters;
   
   for (;;)
   {
@@ -121,7 +227,7 @@ void LwIP_DHCP_task(void * pvParameters)
     {
     case DHCP_START:
       {
-        dhcp_start(&xnetif);
+        dhcp_start(netif);
         /* IP address should be set to 0 
            every time we want to assign a new DHCP address */
         IPaddress = 0;
@@ -132,27 +238,27 @@ void LwIP_DHCP_task(void * pvParameters)
     case DHCP_WAIT_ADDRESS:
       {
         /* Read the new IP address */
-        IPaddress = xnetif.ip_addr.addr;
+        IPaddress = netif->ip_addr.addr;
 
         if (IPaddress!=0) {
           DHCP_state = DHCP_ADDRESS_ASSIGNED;	
 
           /* Stop DHCP */
-          dhcp_stop(&xnetif);
+          dhcp_stop(netif);
         }
         else{
           /* DHCP timeout */
-          if (xnetif.dhcp->tries > MAX_DHCP_TRIES){
+          if (netif->dhcp->tries > MAX_DHCP_TRIES){
             DHCP_state = DHCP_TIMEOUT;
 
             /* Stop DHCP */
-            dhcp_stop(&xnetif);
+            dhcp_stop(netif);
 
             /* Static address used */
             IP4_ADDR(&ipaddr, IP_ADDR0 ,IP_ADDR1 , IP_ADDR2 , IP_ADDR3 );
             IP4_ADDR(&netmask, NETMASK_ADDR0, NETMASK_ADDR1, NETMASK_ADDR2, NETMASK_ADDR3);
             IP4_ADDR(&gw, GW_ADDR0, GW_ADDR1, GW_ADDR2, GW_ADDR3);
-            netif_set_addr(&xnetif, &ipaddr , &netmask, &gw);
+            netif_set_addr(netif, &ipaddr , &netmask, &gw);
           }
         }
       }
