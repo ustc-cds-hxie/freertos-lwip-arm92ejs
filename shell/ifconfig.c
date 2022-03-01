@@ -297,29 +297,37 @@ static void _stat_sys()
 static void _netif_list(struct netif *netif) {
     int i;
     char name[8];
-    struct netdev *dev = netif->state;
 
     memset(name, 0, sizeof(name));
 
     strncpy(name, netif->name, sizeof(netif->name));
-    printf("Iface %s:\n", name);
-    printf("\tIP %s ", inet_ntoa(netif->ip_addr));
-    printf("Netmask %s ", inet_ntoa(netif->netmask));
-    printf("Gateway %s ", inet_ntoa(netif->gw));
-    printf("\n");
-    printf("\tMTU %d ", netif->mtu);
-    printf("\tHWaddr: ");
+    printf_("Iface %s:\n", name);
+    printf_("\tIP %s ", inet_ntoa(netif->ip_addr));
+    printf_("Netmask %s ", inet_ntoa(netif->netmask));
+    printf_("Gateway %s ", inet_ntoa(netif->gw));
+    printf_("\n");
+    printf_("\tMTU %d ", netif->mtu);
+    printf_("\tHWaddr: ");
     for (i = 0; i < netif->hwaddr_len; i++) {
         printf("%02x", netif->hwaddr[i]);
         if ((i+1) < netif->hwaddr_len) {
-            printf(":");
+            printf_(":");
         }
     }
-    printf("\n");
-    printf("\tLink: %s\tState: %s\t",
+    printf_("\n");
+    printf_("\tLink: %s\tState: %s\t",
         netif_is_link_up(netif) ? "UP" : "DOWN",
         netif_is_up(netif) ? "UP" : "DOWN");
-    printf("Link type: %s\n\n", "UNKNOWN");
+    printf_("Link type: %s\n", "UNKNOWN");
+
+#if ETHARP_SUPPORT_VLAN
+    /*
+     * find vlan ID
+     */
+    printf_("\tVLAN ID: %d\n", netif->vlanid);
+#endif /* #if ETHARP_SUPPORT_VLAN */
+
+    printf_("\n");
 }
 
 #if LWIP_SINGLE_NETIF
