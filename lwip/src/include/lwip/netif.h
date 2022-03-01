@@ -399,6 +399,16 @@ struct netif {
   u16_t loop_cnt_current;
 #endif /* LWIP_LOOPBACK_MAX_PBUFS */
 #endif /* ENABLE_LOOPBACK */
+
+/**
+ * VLAN ID for each interface
+ *
+ * Haiyong Xie @ 20220222 
+ */
+#if ETHARP_SUPPORT_VLAN
+  u16_t vlanid;
+#endif
+
 };
 
 #if LWIP_CHECKSUM_CTRL_PER_NETIF
