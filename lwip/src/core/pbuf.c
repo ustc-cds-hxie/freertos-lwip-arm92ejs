@@ -225,7 +225,7 @@ pbuf_alloc(pbuf_layer layer, u16_t length, pbuf_type type)
 {
   struct pbuf *p;
   u16_t offset = (u16_t)layer;
-  LWIP_DEBUGF(PBUF_DEBUG | LWIP_DBG_TRACE, ("pbuf_alloc(length=%"U16_F")\n", length));
+  LWIP_DEBUGF(PBUF_DEBUG | LWIP_DBG_TRACE, ("pbuf_alloc(length=%"U16_F", layer=%"U16_F", type=%"U16_F")\n", length, (u16_t)layer, (u16_t)type));
 
   switch (type) {
     case PBUF_REF: /* fall through */
