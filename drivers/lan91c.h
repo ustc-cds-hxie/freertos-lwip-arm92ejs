@@ -111,6 +111,10 @@ extern QueueHandle_t lan91cqueue;
 typedef struct
 {
    unsigned long base;
+
+/**
+ * multiple (virtual) network interfaces support
+ */
    struct netif* pcurnetif;
    struct netif netif[LAN91C_MAX_NETIF];
    char hwaddr[ETHARP_HWADDR_LEN];

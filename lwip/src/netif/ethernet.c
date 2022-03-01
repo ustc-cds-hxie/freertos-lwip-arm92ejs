@@ -60,6 +60,30 @@
 #include LWIP_HOOK_FILENAME
 #endif
 
+/**
+ * VLAN support
+ *
+ * include definitions for lwip_hook_vlan_check_fn() and lwip_hook_vlan_set_fn()
+ *
+ * Haiyong Xie @ 20220220
+ */
+#if ETHARP_SUPPORT_VLAN 
+#if defined(LWIP_HOOK_VLAN_CHECK) || defined(LWIP_HOOK_VLAN_SET)
+#include "vlan.h"
+#endif
+#endif
+
+/**
+ * Multiple (virtrual) network interfaces support
+ *
+ * include definition of lwip_arp_filter_netif_fn() to support multiple virtual network interfaces
+ *
+ * Haiyong Xie @ 20220220
+ */
+#if LWIP_ARP_FILTER_NETIF
+extern struct netif *lwip_arp_filter_netif_fn(struct pbuf *p, struct netif *netifIn, u16_t type);
+#endif
+
 const struct eth_addr ethbroadcast = {{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}};
 const struct eth_addr ethzero = {{0, 0, 0, 0, 0, 0}};
 
@@ -77,12 +101,6 @@ const struct eth_addr ethzero = {{0, 0, 0, 0, 0, 0}};
  * @see ETHARP_SUPPORT_VLAN
  * @see LWIP_HOOK_VLAN_CHECK
  */
-
-/*
- * add lwip_arp_filter_netif_fn() to support multiple virtual network interfaces
- * Haiyong Xie @ 20220220
- */
-extern struct netif *lwip_arp_filter_netif_fn(struct pbuf *p, struct netif *netifIn, u16_t type);
 
 err_t
 ethernet_input(struct pbuf *p, struct netif *netif)
@@ -129,8 +147,32 @@ ethernet_input(struct pbuf *p, struct netif *netif)
       MIB2_STATS_NETIF_INC(netif, ifinerrors);
       goto free_and_return;
     }
-#if defined(LWIP_HOOK_VLAN_CHECK) || defined(ETHARP_VLAN_CHECK) || defined(ETHARP_VLAN_CHECK_FN) /* if not, allow all VLANs */
-#ifdef LWIP_HOOK_VLAN_CHECK
+
+#if defined(LWIP_HOOK_VLAN_CHECK_AND_FILTER_FN) || defined(LWIP_HOOK_VLAN_CHECK) || defined(ETHARP_VLAN_CHECK) || defined(ETHARP_VLAN_CHECK_FN) /* if not, allow all VLANs */
+  /**
+   * Problem:
+   *    Symptom:
+   *      Original code cannot deal with multiple virtual network interfaces with multiple VLANs (one VLAN for each interface)
+   *    Cause:
+   *      Once an interface (usually the last one) receives an ARP packet with VLAN ID in it, it will check if current interface's VLAN
+   *      ID matches the packet's VLAN ID, if it does not (usually it does not), the packet will be dropped. However, it is common that
+   *      the VLAN tagged packet is for another interface, since the tagged VLAN ID matches another interface's VLAN ID.
+   *
+   * Solution:
+   *   Define LWIP_HOOK_VLAN_CHECK_AND_FILTER_FN(), returns the interface that has a VLAN ID matching the packet's tagged VLAN ID, similar to 
+   *   what LWIP_ARP_FILTER_NETIF_FN() does.
+   *   if LWIP_HOOK_VLAN_CHECK_AND_FILTER_FN() is defined (searching for netif with matching IP address AND VLAN ID), 
+   *   then LWIP_ARP_FILTER_NETIF_FN() is not needed (assuming VLAN is always turned on, each interface alway has a VLAN ID).
+   * 
+   * Haiyong Xie @ 20200220
+   *
+   */
+#if defined(LWIP_HOOK_VLAN_CHECK_AND_FILTER_FN)
+    netif = LWIP_HOOK_VLAN_CHECK_AND_FILTER_FN(netif, ethhdr, vlan);
+    if (NULL == netif){
+      /* we should drop this packet, since no interface has a matching VLAN ID */
+#elif defined(LWIP_HOOK_VLAN_CHECK)
+    /* original lwIP's solution */
     if (!LWIP_HOOK_VLAN_CHECK(netif, ethhdr, vlan)) {
 #elif defined(ETHARP_VLAN_CHECK_FN)
     if (!ETHARP_VLAN_CHECK_FN(ethhdr, vlan)) {
@@ -147,7 +189,7 @@ ethernet_input(struct pbuf *p, struct netif *netif)
 #endif /* ETHARP_SUPPORT_VLAN */
 
 #if LWIP_ARP_FILTER_NETIF
-  netif = LWIP_ARP_FILTER_NETIF_FN(p, netif, lwip_htons(type));
+  netif = LWIP_ARP_FILTER_NETIF_FN(p, netif, lwip_ntohs(type));
 #if 1
   /* multiple virtual network interfaces: 
    * packet has no netif corresponding to it: free pbuf */
@@ -329,8 +371,19 @@ ethernet_output(struct netif * netif, struct pbuf * p,
 
   LWIP_ASSERT("netif->hwaddr_len must be 6 for ethernet_output!",
               (netif->hwaddr_len == ETH_HWADDR_LEN));
+#if 0
   LWIP_DEBUGF(ETHARP_DEBUG | LWIP_DBG_TRACE,
               ("ethernet_output: sending packet %p\n", (void *)p));
+#else
+  LWIP_DEBUGF(ETHARP_DEBUG | LWIP_DBG_TRACE,
+            ("ethernet_output: sending packet %p, dest:%"X8_F":%"X8_F":%"X8_F":%"X8_F":%"X8_F":%"X8_F", src:%"X8_F":%"X8_F":%"X8_F":%"X8_F":%"X8_F":%"X8_F", type:%"X16_F"\n",
+            (void *)p, 
+            (unsigned char)ethhdr->dest.addr[0], (unsigned char)ethhdr->dest.addr[1], (unsigned char)ethhdr->dest.addr[2],
+            (unsigned char)ethhdr->dest.addr[3], (unsigned char)ethhdr->dest.addr[4], (unsigned char)ethhdr->dest.addr[5],
+            (unsigned char)ethhdr->src.addr[0],  (unsigned char)ethhdr->src.addr[1],  (unsigned char)ethhdr->src.addr[2],
+            (unsigned char)ethhdr->src.addr[3],  (unsigned char)ethhdr->src.addr[4],  (unsigned char)ethhdr->src.addr[5],
+            lwip_ntohs(ethhdr->type)));
+#endif
 
   /* send the packet */
   return netif->linkoutput(netif, p);

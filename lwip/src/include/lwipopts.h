@@ -189,11 +189,30 @@
 #define PBUF_POOL_BUFSIZE               LWIP_MEM_ALIGN_SIZE(TCP_MSS+40+PBUF_LINK_HLEN)
 
 /**
+ * 
+ * DO NOT DEFINE PBUF_LINK_HLEN!!! Otherwise CONFLICT with VLAN !!!
+ *
+ * Should let lwIP to compute PBUF_LINK_HLEN itself!
+ *
+ * refer to lwip/opt.h: Lines 1565-1571 
+ *
+ *  #if !defined PBUF_LINK_HLEN || defined __DOXYGEN__
+ * #if (defined LWIP_HOOK_VLAN_SET || LWIP_VLAN_PCP) && !defined __DOXYGEN__
+ * #define PBUF_LINK_HLEN                  (18 + ETH_PAD_SIZE)
+ * #else // LWIP_HOOK_VLAN_SET || LWIP_VLAN_PCP 
+ * #define PBUF_LINK_HLEN                  (14 + ETH_PAD_SIZE)
+ * #endif // LWIP_HOOK_VLAN_SET || LWIP_VLAN_PCP 
+ * #endif
+ *
+ */
+#if 0
+/**
  * PBUF_LINK_HLEN: the number of bytes that should be allocated for a
  * link level header. The default is 14, the standard value for
  * Ethernet.
  */
 #define PBUF_LINK_HLEN                  16
+#endif
 
 /**
  * SYS_LIGHTWEIGHT_PROT==1: if you want inter-task protection for certain
@@ -554,7 +573,7 @@
  * copied from lwip/opt.h for future revisions
  */
  
-#if 0
+#if 1
 /**
  * ETHARP_SUPPORT_VLAN==1: support receiving and sending ethernet packets with
  * VLAN header. See the description of LWIP_HOOK_VLAN_CHECK and
@@ -567,6 +586,7 @@
  */
 #define ETHARP_SUPPORT_VLAN             1
 
+#if 0
 /**
  * LWIP_VLAN_PCP==1: Enable outgoing VLAN taggning of frames on a per-PCB basis
  * for QoS purposes. With this feature enabled, each PCB has a new variable: "tci".
@@ -577,7 +597,9 @@
  */
 
 #define LWIP_VLAN_PCP                   1
+#endif // if 0
 
+#if 1
 /**
  * LWIP_HOOK_VLAN_CHECK(netif, eth_hdr, vlan_hdr):
  * Called from ethernet_input() if VLAN support is enabled
@@ -592,7 +614,34 @@
  * - 0: Packet must be dropped.
  * - != 0: Packet must be accepted.
  */
-#define LWIP_HOOK_VLAN_CHECK(netif, eth_hdr, vlan_hdr)
+#define LWIP_HOOK_VLAN_CHECK(netif, eth_hdr, vlan_hdr) lwip_hook_vlan_check_fn(netif, eth_hdr, vlan_hdr)
+
+#else
+
+/**
+ * LWIP_HOOK_VLAN_CHECK_AND_FILTER_FN(netif, eth_hdr, vlan_hdr):
+ *
+ * Called from ethernet_input() if VLAN support is enabled AND multiple interface is enabled
+ *
+ * Signature:\code{.c}
+ *   struct netif *my_hook(struct netif *netif, struct eth_hdr *eth_hdr, struct eth_vlan_hdr *vlan_hdr);
+ * \endcode
+ *
+ * Arguments:
+ * - netif: struct netif on which the packet has been received
+ * - eth_hdr: struct eth_hdr of the packet
+ * - vlan_hdr: struct eth_vlan_hdr of the packet
+ *
+ * Return values:
+ * - NULL: no interface has a matching VLAN ID, thus the packet must be dropped.
+ * - != NULL: an interface (its pointer is returned) has a matching VLAN ID, thus the packet must be accepted.
+ *
+ * Note:
+ *    Functions are overlapping with LWIP_ARP_FILTER_NETIF_FN(). 
+ */
+#define LWIP_HOOK_VLAN_CHECK_AND_FILTER_FN(netif, eth_hdr, vlan_hdr) lwip_hook_vlan_check_and_filter_fn(netif, eth_hdr, vlan_hdr)
+
+#endif
 
 /**
  * LWIP_HOOK_VLAN_SET:
@@ -611,13 +660,12 @@
  *
  *
  * Return values:
- * - &lt;0: Packet shall not contain VLAN header.
- * - 0 &lt;= return value &lt;= 0xFFFF: Packet shall contain VLAN header. Return value is prio_vid in host byte order.
+ * - < 0: Packet shall not contain VLAN header.
+ * - 0 <= return value <= 0xFFFF: Packet shall contain VLAN header. Return value is prio_vid in host byte order.
  */
-#define LWIP_HOOK_VLAN_SET(netif, p, src, dst, eth_type)
+#define LWIP_HOOK_VLAN_SET(netif, p, src, dst, eth_type) lwip_hook_vlan_set_fn(netif, p, src, dst, eth_type)
 
-
-#endif // #if 0 for VLAN
+#endif // #if 1 for VLAN
 
 /*
    -----------------------------------
@@ -639,7 +687,7 @@
 #define MY_DEBUG_CODE              (LWIP_DBG_ON | LWIP_DBG_TYPES_ON | LWIP_DBG_MIN_LEVEL)
 #define NETIF_DEBUG                MY_DEBUG_CODE
 #define ARP_DEBUG                  MY_DEBUG_CODE
-//#define ETHARP_DEBUG               MY_DEBUG_CODE
+#define ETHARP_DEBUG               MY_DEBUG_CODE
 #define ICMP_DEBUG                 MY_DEBUG_CODE
 #define IP_DEBUG                   MY_DEBUG_CODE
 #define LWIP_DBG_MIN_LEVEL         LWIP_DBG_LEVEL_ALL
@@ -649,6 +697,8 @@
 #define TCP_DEBUG                  MY_DEBUG_CODE
 #define PBUF_DEBUG                 MY_DEBUG_CODE
 #define TCPIP_DEBUG                MY_DEBUG_CODE
+
+#define SANE_DBG_ARP_FILTER        (SANE_DBG_ON | SANE_DBG_MIN_LEVEL)
 #endif 
 
 // below macros are for EXTENSIVE debug

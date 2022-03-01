@@ -46,61 +46,6 @@
 #include "lan91c.h"
 #include "sic.h"
 
-struct netif *lwip_arp_filter_netif_fn(struct pbuf *p, struct netif *netifIn, u16_t type)
-{
-  struct netif *netif = NULL;
-  struct etharp_hdr *etharphdr = NULL;
-  struct ip_hdr *iphdr = NULL;
-  ip_addr_t src, dst;
-
-  SANE_DEBUGF(SANE_DBG_ARP_FILTER, ("lwip_arp_filter_netif_fn: entry, netifIn = %c%c, type = %04x\n", netifIn->name[0], netifIn->name[1], type));
-
-  switch (type)
-  {
-    /* ARP */
-    case 0x0806:
-        etharphdr = (struct etharp_hdr *) ((unsigned char *)p->payload + 14);
-        memcpy(&dst, &etharphdr->dipaddr, sizeof(ip4_addr_t));
-        memcpy(&src, &etharphdr->sipaddr, sizeof(ip_addr_t));
-
-        for (netif = netif_list; netif != NULL; netif = netif->next)
-        {
-          if (netif_is_up(netif) && ip4_addr_cmp(&dst, &(netif->ip_addr)))
-          {
-            SANE_DEBUGF(SANE_DBG_ARP_FILTER, ("lwip_arp_filter_netif_fn: case 0x0806, mactch netif = %c%c, dst = %s\n", netif->name[0], netif->name[1], inet_ntoa(netif->ip_addr)));
-            break;
-          }
-        }
-        break;
-
-      /* IP */
-    case 0x0800:
-        iphdr = (struct ip_hdr *)((unsigned char *) p->payload + 14);
-        ip_addr_copy_from_ip4(dst, iphdr->dest);
-        ip_addr_copy_from_ip4(src, iphdr->src);
-
-        for (netif = netif_list; netif != NULL; netif = netif->next)
-        {
-          if (netif_is_up(netif) && ip4_addr_cmp(&dst, &(netif->ip_addr)))
-          {
-            SANE_DEBUGF(SANE_DBG_ARP_FILTER, ("lwip_arp_filter_netif_fn: case 0x0800, mactch netif = %c%c, dst = %s\n", netif->name[0], netif->name[1], inet_ntoa(netif->ip_addr)));
-            break;
-          }
-        }
-        break;
-
-      /* default */
-    default:
-        netif = netif_list;
-        SANE_DEBUGF(SANE_DBG_ARP_FILTER, ("lwip_arp_filter_netif_fn: case default, mactch netif = %c%c (use 1st netif as default), dst = %s\n", netif->name[0], netif->name[1], inet_ntoa(netif->ip_addr)));
-        break;
-
-  } /* switch */
-
-  SANE_DEBUGF(SANE_DBG_ARP_FILTER, ("lwip_arp_filter_netif_fn: return, found netif = %c%c\n", netif->name[0], netif->name[1]));
-  return netif;
-}
-
 /**
   * @brief  Initializes the lwIP stack
   * @param  None
@@ -159,7 +104,6 @@ void lwip_network_init(void)
   netif_set_link_callback(&nxetif, lan91c->linkChangeMsg);
 #endif
 
-
   /* second virtual interface */
   IP4_ADDR(&ipaddr, 10, 0, 1, 10);
   IP4_ADDR(&netmask, 255, 255, 255, 0);
@@ -181,11 +125,10 @@ void lwip_network_init(void)
   lan91c->pcurnetif = &(lan91c->netif[2]);
   lan91c->pcurnetif->name[0] = 'l';
   lan91c->pcurnetif->name[1] = '2';
-  
+
   netif_add(lan91c->pcurnetif, &ipaddr, &netmask, &gw, lan91c, lwip_network_init_lan91cInit, tcpip_input);
   netif_set_up(lan91c->pcurnetif);
   netif_set_link_up(lan91c->pcurnetif);
-
 
 #ifdef USE_DHCP
   DHCP_state = DHCP_START;

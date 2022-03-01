@@ -118,11 +118,11 @@ STARTUP_OBJS = main.o
 
 FATFS_OBJS = syscalls.o ramdisk.o untar.o
 
-DRIVERS_OBJS = timer.o pic.o sic.o uart.o bsp.o ethernetif.o lan91c.o console.o
+DRIVERS_OBJS = timer.o pic.o sic.o uart.o bsp.o ethernetif.o lan91c.o console.o arpfilter.o vlan.o
 
 APP_OBJS = demotasks.o disktest.o
 
-SHELL_OBJS = shell.o command.o ifconfig.o arp.o ping.o
+SHELL_OBJS = shell.o command.o ifconfig.o arp.o ping.o vconf.o
 
 # nostdlib.o must be commented out if standard lib is going to be linked!
 #LIB_OBJS = nostdlib.o

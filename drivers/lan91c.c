@@ -68,6 +68,17 @@ void setup_lan91c_base_address()
    LAN91C* lan91c = &gLan91c;
    lan91c->base = LAN91C111_BASE_ADDR;
 
+/**
+ * VLAN support
+ */
+#if ETHARP_SUPPORT_VLAN
+   /**
+    * set default VLAN ID for each interface
+    */
+   for (int i = 0; i < LAN91C_MAX_NETIF; i++)
+      (lan91c->netif[i]).vlanid = 0;
+#endif
+
    /*
     * get PHY hwaddr
     */
