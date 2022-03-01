@@ -41,6 +41,7 @@
 
 #include "ifconfig.h"
 #include "ping.h"
+#include "vconf.h"
 
 
 #define MAX_COMMAND_BUF_SIZE (5*1024)
@@ -69,6 +70,7 @@ const ShellCmd SHELL_CMDS[] =
    {"ps", "Display threads information", cmdPs},
    {"top", "Display threads runtime information", cmdTop},
    {"ifconfig", "show network interface information, and config interface", cmdIfconfig},
+   {"vconf", "show / config vlan config for interfaces: vconf, vconf <intf> <VLAN ID>", cmdVconf},   
    {"ping", "ping <IP>", cmdPing},
    {"arp", "show/update arp table: arp, arp -d [IP], arp -i IP MAC Intf", cmdArp},
    {"stat", "show usage information of memory heap, memory pool, and system sem/mutex/mbox", cmdStat},
