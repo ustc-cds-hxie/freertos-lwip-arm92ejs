@@ -84,6 +84,8 @@
 #define SANE_DBG_IRQ           0x0200U
 #define SANE_DBG_ETH_RECV      0x0400U
 #define SANE_DBG_ARP_FILTER    0x0800U
+#define SANE_DBG_VLAN          0x1000U
+#define SANE_DBG_LAN91CTX      0x2000U
 
 /* Plaform specific diagnostic output */
 #define SANE_PLATFORM_DIAG(x)   do {                \

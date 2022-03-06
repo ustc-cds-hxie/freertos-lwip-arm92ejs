@@ -103,12 +103,12 @@ FREERTOS_FAT_OBJS = ff_crc.o ff_dir.o ff_error.o ff_fat.o ff_file.o ff_format.o 
 FREERTOS_FAT_OBJS += ff_locking.o ff_memory.o ff_stdio.o ff_string.o ff_sys.o ff_time.o
 FREERTOS_FAT_PORTABLE_OBJS = ff_ramdisk.o
 
-LWIP_OBJS = dhcp.o acd.o err.o tcpip.o sys_arch.o \
+LWIP_OBJS = dhcp.o acd.o err.o tcpip.o sys_arch.o if_api.o \
 			sockets.o api_lib.o api_msg.o netbuf.o \
               init.o def.o dns.o inet_chksum.o ip.o mem.o memp.o netif.o \
               pbuf.o raw.o stats.o sys.o altcp.o altcp_alloc.o altcp_tcp.o \
               tcp.o tcp_in.o tcp_out.o timeouts.o udp.o icmp.o ip4.o \
-              ip4_addr.o ip4_frag.o ethernet.o etharp.o
+              ip4_addr.o ip4_frag.o ethernet.o etharp.o 
 
 LWIP_INCS = -I $(SRCDIR)/lwip/src/include/
 
@@ -122,7 +122,7 @@ DRIVERS_OBJS = timer.o pic.o sic.o uart.o bsp.o ethernetif.o lan91c.o console.o 
 
 APP_OBJS = demotasks.o disktest.o
 
-SHELL_OBJS = shell.o command.o ifconfig.o arp.o ping.o vconf.o
+SHELL_OBJS = shell.o command.o ifconfig.o arp.o ping.o vconf.o net.o iperfapp.o cmdlwiperf.o lwiperf_dualproto.o
 
 # nostdlib.o must be commented out if standard lib is going to be linked!
 #LIB_OBJS = nostdlib.o
@@ -143,7 +143,7 @@ INC_FREERTOS_FAT_PORTABLE = -I $(FREERTOS_FAT_SRC)portable/common
 INC_DRIVERS = -I $(DRIVERS_SRC)
 INC_LIB = -I $(LIB_SRC)
 INC_LIB_READLINE = -I $(LIB_READLINE_SRC)
-INC_SHELL = -I $(SHELL_SRC)
+INC_SHELL = -I $(SHELL_SRC) -I $(SHELL_SRC)/iperf
 
 # Complete include flags to be passed to $(CC) where necessary
 INC_FLAGS = -I $(STARTUP_SRC) -I $(APP_SRC) -I $(FATFS_SRC) -I $(FREERTOS_PORT_SRC) \
@@ -175,6 +175,7 @@ vpath %.c $(SRCDIR)/lwip/src/ $(SRCDIR)/lwip/src/api/ $(SRCDIR)/lwip/src/core/ $
 	$(APP_SRC) \
 	$(LIB_SRC) \
 	$(SHELL_SRC) \
+	$(SHELL_SRC)/iperf/ \
 	$(LIB_READLINE_SRC)
 
 .PHONY: all clean run

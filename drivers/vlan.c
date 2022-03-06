@@ -35,6 +35,7 @@
 #include "lwip/stats.h"
 #include "lwip/etharp.h"
 #include "lwip/ip.h"
+#include "debug.h"
 
 #include "vlan.h"
 
@@ -69,15 +70,14 @@ int lwip_hook_vlan_check_fn(struct netif *netif, struct eth_hdr *eth_hdr, struct
     NETIF_FOREACH(nif) {
         if (nif->vlanid == lwip_ntohs((u16_t) (vlan_hdr->prio_vid)))
         {
-            printf_("lwip_hook_vlan_check_fn: netif %c%c VLAN ID matches %d %d\n", 
-                nif->name[0], nif->name[1], 
-                nif->vlanid, lwip_ntohs((u16_t) (vlan_hdr->prio_vid)));
+            SANE_DEBUGF(SANE_DBG_VLAN, ("lwip_hook_vlan_check_fn: netif %c%c VLAN ID matches %d %d\n", 
+                nif->name[0], nif->name[1], nif->vlanid, lwip_ntohs((u16_t) (vlan_hdr->prio_vid))));
             return 1;
         }
     }
 
-    printf_("lwip_hook_vlan_check_fn: netif %c%c no matching VLAN ID %d\n", 
-        netif->name[0], netif->name[1], lwip_ntohs((u16_t) (vlan_hdr->prio_vid)));
+    SANE_DEBUGF(SANE_DBG_VLAN, ("lwip_hook_vlan_check_fn: netif %c%c no matching VLAN ID %d\n", 
+        netif->name[0], netif->name[1], lwip_ntohs((u16_t) (vlan_hdr->prio_vid))));
 
     return 0;
 }
@@ -120,14 +120,14 @@ struct netif *lwip_hook_vlan_check_and_filter_fn(struct netif *netif, struct eth
          */
         if (nif->vlanid == lwip_ntohs((u16_t) (vlan_hdr->prio_vid)) )
         {
-            printf_("lwip_hook_vlan_check_and_filter_fn: netif %c%c VLAN ID matches %d %d\n", 
-                nif->name[0], nif->name[1], nif->vlanid, lwip_ntohs((u16_t) (vlan_hdr->prio_vid)));
+            SANE_DEBUGF(SANE_DBG_VLAN, ("lwip_hook_vlan_check_and_filter_fn: netif %c%c VLAN ID matches %d %d\n", 
+                nif->name[0], nif->name[1], nif->vlanid, lwip_ntohs((u16_t) (vlan_hdr->prio_vid))));
             return nif;
         }
     }
 
-    printf_("lwip_hook_vlan_check_and_filter_fn: netif %c%c VLAN ID no-match %d\n", 
-        netif->name[0], netif->name[1], lwip_ntohs((u16_t) (vlan_hdr->prio_vid)));
+    SANE_DEBUGF(SANE_DBG_VLAN, ("lwip_hook_vlan_check_and_filter_fn: netif %c%c VLAN ID no-match %d\n", 
+        netif->name[0], netif->name[1], lwip_ntohs((u16_t) (vlan_hdr->prio_vid))));
 
     return NULL;
 }
@@ -158,9 +158,13 @@ struct netif *lwip_hook_vlan_check_and_filter_fn(struct netif *netif, struct eth
 s32_t lwip_hook_vlan_set_fn(struct netif* netif, struct pbuf* pbuf, const struct eth_addr* src, const struct eth_addr* dst, u16_t eth_type)
 {
     if (netif->vlanid <= 0){
+        SANE_DEBUGF(SANE_DBG_VLAN, ("lwip_hook_vlan_set_fn: netif %c%c VLAN disabled (%d)\n", 
+                netif->name[0], netif->name[1], netif->vlanid));
         return -1;
     }
 
+    SANE_DEBUGF(SANE_DBG_VLAN, ("lwip_hook_vlan_set_fn: netif %c%c packet set VLAN ID %d\n", 
+                netif->name[0], netif->name[1], netif->vlanid));
     return netif->vlanid;
 }
 

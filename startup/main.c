@@ -54,6 +54,8 @@
 #include "debug.h"
 #include "shell.h"
 
+#include "net.h"
+
 void show_version_1( void )
 {
     printf_("\n"
@@ -97,11 +99,13 @@ void show_version( void )
  * to System mode and enable interrupt exceptions.
 */
 
+void shell_init(void);
+
 void main(void)
 {
     consoleInit();
   
-    show_version_1();
+    show_version();
 
     //demoTasks();
 
@@ -120,6 +124,9 @@ void main(void)
     /* Initialize webserver demo */
     
     //http_server_socket_init();
+
+    /* lwIP original telnet shell */
+    lwip_shell_init();
 
     /* start shell */
     start_shell_task();

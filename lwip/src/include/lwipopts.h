@@ -90,13 +90,13 @@
  * If the application sends a lot of data out of ROM (or other static memory),
  * this should be set high.
  */
-#define MEMP_NUM_PBUF                   100
+#define MEMP_NUM_PBUF                   200
 
 /**
  * MEMP_NUM_RAW_PCB: Number of raw connection PCBs
  * (requires the LWIP_RAW option)
  */
-#define MEMP_NUM_RAW_PCB                4
+#define MEMP_NUM_RAW_PCB                10
 
 /**
  * MEMP_NUM_UDP_PCB: the number of UDP protocol control blocks. One
@@ -109,7 +109,7 @@
  * MEMP_NUM_TCP_PCB: the number of simulatenously active TCP connections.
  * (requires the LWIP_TCP option)
  */
-#define MEMP_NUM_TCP_PCB                10
+#define MEMP_NUM_TCP_PCB                32
 
 /**
  * MEMP_NUM_TCP_PCB_LISTEN: the number of listening TCP connections.
@@ -121,7 +121,7 @@
  * MEMP_NUM_TCP_SEG: the number of simultaneously queued TCP segments.
  * (requires the LWIP_TCP option)
  */
-#define MEMP_NUM_TCP_SEG                20
+#define MEMP_NUM_TCP_SEG                200
 
 /**
  * MEMP_NUM_REASSDATA: the number of simultaneously IP packets queued for
@@ -400,7 +400,7 @@
 #define TCP_MSS                 (1500 - 40)	  /* TCP_MSS = (Ethernet MTU - IP header size - TCP header size) */
 
 /* TCP sender buffer space (bytes). */
-#define TCP_SND_BUF             (2*TCP_MSS)
+#define TCP_SND_BUF             (20*TCP_MSS)
 
 /*  TCP_SND_QUEUELEN: TCP sender buffer space (pbufs). This must be at least
   as much as (2 * TCP_SND_BUF/TCP_MSS) for things to work. */
@@ -681,6 +681,12 @@
 #define LWIP_DBG_TYPES_ON          LWIP_DBG_OFF
 #endif
 
+#if 0
+#define LWIP_DBG_TYPES_ON         (LWIP_DBG_ON|LWIP_DBG_TRACE|LWIP_DBG_STATE|LWIP_DBG_FRESH)
+#define MY_DEBUG_CODE              (LWIP_DBG_ON | LWIP_DBG_TYPES_ON | LWIP_DBG_MIN_LEVEL)
+#define TCP_DEBUG                   MY_DEBUG_CODE
+#endif
+
 // below macros are for NORMAL debug
 #if 0
 #define LWIP_DBG_TYPES_ON         (LWIP_DBG_ON|LWIP_DBG_TRACE|LWIP_DBG_STATE|LWIP_DBG_FRESH)
@@ -697,8 +703,11 @@
 #define TCP_DEBUG                  MY_DEBUG_CODE
 #define PBUF_DEBUG                 MY_DEBUG_CODE
 #define TCPIP_DEBUG                MY_DEBUG_CODE
+#define TCP_RST_DEBUG              MY_DEBUG_CODE
 
 #define SANE_DBG_ARP_FILTER        (SANE_DBG_ON | SANE_DBG_MIN_LEVEL)
+
+#define SANE_DBG_LAN91CTX           (SANE_DBG_ON | SANE_DBG_MIN_LEVEL)
 #endif 
 
 // below macros are for EXTENSIVE debug

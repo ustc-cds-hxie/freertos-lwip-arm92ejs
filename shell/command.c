@@ -43,6 +43,9 @@
 #include "ping.h"
 #include "vconf.h"
 
+#include "net.h"
+#include "cmdlwiperf.h"
+#include "iperfapp.h"
 
 #define MAX_COMMAND_BUF_SIZE (5*1024)
 
@@ -52,6 +55,9 @@ void cmdCmdTest(int argc, char* argv[]);
 void ramDiskTestTask(void *pvParameters);
 void cmdRamDiskTest(int argc, char* argv[]);
 void cmdArp(int argc, char* argv[]);
+void cmdNet(int argc, char* argv[]);
+void cmdIperfServer(int argc, char *argv[]);
+void cmdIperfApp(int argc, char *argv[]);
 
 /****************************************************************************
  *
@@ -72,8 +78,11 @@ const ShellCmd SHELL_CMDS[] =
    {"ifconfig", "show network interface information, and config interface", cmdIfconfig},
    {"vconf", "show / config vlan config for interfaces: vconf, vconf <intf> <VLAN ID>", cmdVconf},   
    {"ping", "ping <IP>", cmdPing},
+   {"lwiperf", "iperf server mode (both TCP and UDP)", cmdIperfServer},
+   {"iperfapp", "iperf server / client app (TCP only)", cmdIperfApp},
    {"arp", "show/update arp table: arp, arp -d [IP], arp -i IP MAC Intf", cmdArp},
    {"stat", "show usage information of memory heap, memory pool, and system sem/mutex/mbox", cmdStat},
+   {"net", "lwIP utilities: open/lstn/acpt/send/recv/udpc/udpl/udpn/udpb/usnd/stat/idxtoname/nametoidx/gethostnm", cmdNet},
    {"cmdtest", "run batch of common commands", cmdCmdTest},
    {"ramdisktest", "run batch of RAM disk test", cmdRamDiskTest},
    {"help", "display help message", cmdHelp},
@@ -167,6 +176,20 @@ void cmdPs(int argc, char* argv[])
  * configUSE_STATS_FORMATTING_FUNCTIONS
  */
 
+void cmdIperfServer(int argc, char *argv[])
+{
+
+    lwip_iperf_dual_server_init();
+
+}
+
+void cmdIperfApp(int argc, char *argv[])
+{
+
+  cmd_iperfapp(argc, argv);
+
+}
+
 void cmdTop(int argc, char* argv[])
 {
     vTaskGetRunTimeStats(buf); 
@@ -185,6 +208,118 @@ void cmdPing(int argc, char *argv[])
    ip_addr_t target;
    target.addr = inet_addr(argv[1]);
    ping_thread((void *)&target);
+}
+
+static struct command netcommands;
+
+void cmdNet(int argc, char *argv[])
+{
+    struct command *com = &netcommands;
+    int i;
+
+    if (strncmp((const char *)argv[1], "open", 4) == 0) {
+    com->exec = com_open;
+    com->nargs = 2;
+    for (i = 0; i < com->nargs && i + 2 < argc; i++)
+        com->args[i] = argv[i+2];
+
+  } else if (strncmp((const char *)argv[1], "lstn", 4) == 0) {
+    com->exec = com_lstn;
+    com->nargs = 1;
+    for (i = 0; i < com->nargs && i + 2 < argc; i++)
+        com->args[i] = argv[i+2];
+
+  } else if (strncmp((const char *)argv[1], "acpt", 4) == 0) {
+    com->exec = com_acpt;
+    com->nargs = 1;
+    for (i = 0; i < com->nargs && i + 2 < argc; i++)
+        com->args[i] = argv[i+2];
+
+  } else if (strncmp((const char *)argv[1], "clos", 4) == 0) {
+    com->exec = com_clos;
+    com->nargs = 1;
+    for (i = 0; i < com->nargs && i + 2 < argc; i++)
+        com->args[i] = argv[i+2];
+
+#if LWIP_STATS
+  } else if (strncmp((const char *)argv[1], "stat", 4) == 0) {
+    com->exec = com_stat;
+    com->nargs = 0;
+    for (i = 0; i < com->nargs && i + 2 < argc; i++)
+        com->args[i] = argv[i+2];
+#endif
+  } else if (strncmp((const char *)argv[1], "send", 4) == 0) {
+    com->exec = com_send;
+    com->nargs = 2;
+    for (i = 0; i < com->nargs && i + 2 < argc; i++)
+        com->args[i] = argv[i+2];
+
+  } else if (strncmp((const char *)argv[1], "recv", 4) == 0) {
+    com->exec = com_recv;
+    com->nargs = 1;
+    for (i = 0; i < com->nargs && i + 2 < argc; i++)
+        com->args[i] = argv[i+2];
+
+  } else if (strncmp((const char *)argv[1], "udpc", 4) == 0) {
+    com->exec = com_udpc;
+    com->nargs = 3;
+    for (i = 0; i < com->nargs && i + 2 < argc; i++)
+        com->args[i] = argv[i+2];
+
+  } else if (strncmp((const char *)argv[1], "udpb", 4) == 0) {
+    com->exec = com_udpb;
+    com->nargs = 2;
+    for (i = 0; i < com->nargs && i + 2 < argc; i++)
+        com->args[i] = argv[i+2];
+
+  } else if (strncmp((const char *)argv[1], "udpl", 4) == 0) {
+    com->exec = com_udpl;
+    com->nargs = 3;
+    for (i = 0; i < com->nargs && i + 2 < argc; i++)
+        com->args[i] = argv[i+2];
+
+  } else if (strncmp((const char *)argv[1], "udpn", 4) == 0) {
+    com->exec = com_udpn;
+    com->nargs = 3;
+    for (i = 0; i < com->nargs && i + 2 < argc; i++)
+        com->args[i] = argv[i+2];
+
+  } else if (strncmp((const char *)argv[1], "usnd", 4) == 0) {
+    com->exec = com_usnd;
+    com->nargs = 2;
+    for (i = 0; i < com->nargs && i + 2 < argc; i++)
+        com->args[i] = argv[i+2];
+
+#if LWIP_SOCKET
+  } else if (strncmp((const char *)argv[1], "idxtoname", 9) == 0) {
+    com->exec = com_idxtoname;
+    com->nargs = 1;
+    for (i = 0; i < com->nargs && i + 2 < argc; i++)
+        com->args[i] = argv[i+2];
+
+  } else if (strncmp((const char *)argv[1], "nametoidx", 9) == 0) {
+    com->exec = com_nametoidx;
+    com->nargs = 1;
+    for (i = 0; i < com->nargs && i + 2 < argc; i++)
+        com->args[i] = argv[i+2];
+#endif /* LWIP_SOCKET */
+#if LWIP_DNS
+  } else if (strncmp((const char *)argv[1], "gethostnm", 9) == 0) {
+    com->exec = com_gethostbyname;
+    com->nargs = 1;
+    for (i = 0; i < com->nargs && i + 2 < argc; i++)
+        com->args[i] = argv[i+2];
+#endif /* LWIP_DNS */
+  } else if (strncmp((const char *)argv[1], "help", 4) == 0) {
+    com->exec = com_help;
+    com->nargs = 0;
+  } else {
+    return;
+  }
+
+  com->conn = NULL;
+  com->exec(com);
+
 }
 
 void cmdHelp(int argc, char *argv[])
